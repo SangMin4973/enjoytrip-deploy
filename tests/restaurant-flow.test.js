@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createExampleRestaurants, filterRestaurants } from '../js/restaurant-data.js';
+import { normalizeRestaurant, searchWithPlaces } from '../js/restaurant-api.js';
 import * as store from '../js/restaurant-store.js';
 import * as auth from '../js/auth.js';
 
@@ -12,23 +12,62 @@ globalThis.localStorage = {
   removeItem: key => saved.delete(key),
 };
 
-test('지역만 검색하거나 메뉴 동의어를 추가해 예시 음식점을 조회한다', () => {
-  const restaurants = createExampleRestaurants();
-  assert.equal(restaurants.length, 24);
-  assert.ok(restaurants.every(item => item.isExample && item.videos.length <= 5));
-  assert.equal(filterRestaurants(restaurants, ' 광주 ').length, 6);
-  assert.equal(filterRestaurants(restaurants, '광주광역시', '통닭').length, 1);
-  assert.equal(filterRestaurants(restaurants, '부산', '고기').length, 2);
-  assert.equal(filterRestaurants(restaurants, '없는지역').length, 0);
+const place = { id: '12345', place_name: '검색 응답 음식점', category_group_code: 'FD6', category_name: '음식점 > 한식', phone: '', address_name: '서울 종로구', road_address_name: '서울 종로구 종로 1', x: '126.98', y: '37.57' };
+
+test('카카오 실제 응답의 도로명·좌표·ID를 사용하고 없는 사진·별점·영상을 만들지 않는다', () => {
+  const restaurant = normalizeRestaurant(place);
+  assert.equal(restaurant.id, 'kakao-12345');
+  assert.equal(restaurant.address, place.road_address_name);
+  assert.equal(restaurant.longitude, 126.98);
+  assert.equal(restaurant.placeUrl, 'https://place.map.kakao.com/12345');
+  assert.equal(restaurant.phone, '');
+  for (const field of ['rating', 'image', 'videos', 'googleResults']) assert.equal(Object.hasOwn(restaurant, field), false);
+  assert.equal(normalizeRestaurant({ ...place, road_address_name: '' }).address, place.address_name);
+  assert.throws(() => normalizeRestaurant({ ...place, x: 'bad' }), /형식/);
+  assert.throws(() => normalizeRestaurant({ ...place, y: '' }), /형식/);
 });
 
-test('예시 음식점 최초 저장 이후 기존 내용을 덮어쓰지 않는다', () => {
+test('실제 카탈로그는 이전 더미·회원 북마크를 보존하고 여러 검색의 장소를 ID로 합친다', () => {
   saved.clear();
-  const restaurants = store.loadRestaurants();
-  restaurants[0].name = '수정된 예시'; store.saveRestaurantImages(restaurants);
-  assert.equal(store.loadRestaurants()[0].name, '수정된 예시');
-  saved.set('enjoytrip.base.restaurantCatalog', '{}');
+  const legacy = JSON.stringify([{ id: 'example-0-0', name: '이전 더미' }]);
+  saved.set('enjoytrip.base.restaurantCatalog', legacy);
+  const group = store.createBookmark('member', '기존 북마크');
+  store.setBookmarkRestaurant('member', group.id, 'example-0-0', true);
+  assert.deepEqual(store.loadRestaurants(), []);
+  store.saveRestaurants([normalizeRestaurant(place)]);
+  store.saveRestaurants([normalizeRestaurant({ ...place, place_name: '갱신한 이름' }), normalizeRestaurant({ ...place, id: '67890' })]);
+  assert.equal(store.loadRestaurants().length, 2);
+  assert.equal(store.loadRestaurants()[0].name, '갱신한 이름');
+  assert.equal(saved.get('enjoytrip.base.restaurantCatalog'), legacy);
+  assert.deepEqual(store.loadBookmarks('member')[0].restaurantIds, ['example-0-0']);
+  saved.set('enjoytrip.base.kakaoRestaurantCatalog', '{}');
   assert.throws(() => store.loadRestaurants(), /형식/);
+});
+
+test('음식점 카테고리로 지역·메뉴를 검색하고 페이지 정보와 실제 후보만 반환한다', async () => {
+  let request;
+  const services = { Status: { OK: 'OK', ZERO_RESULT: 'ZERO' }, Places: class {
+    keywordSearch(query, callback, options) {
+      request = { query, options };
+      callback([place, place, { ...place, id: '9', category_group_code: 'CE7' }], 'OK', { totalCount: 80, hasNextPage: true });
+    }
+  } };
+  const result = await searchWithPlaces(services, ' 부산 ', ' 치킨 ', 2);
+  assert.deepEqual(request, { query: '부산 치킨', options: { category_group_code: 'FD6', size: 15, page: 2 } });
+  assert.equal(result.restaurants.length, 1); assert.equal(result.total, 80); assert.equal(result.hasNext, true);
+  assert.equal((await searchWithPlaces(services, '부산', '', 3)).hasNext, false);
+  assert.equal(request.query, '부산 음식점');
+  await assert.rejects(searchWithPlaces(services, '  '), /지역/);
+  await assert.rejects(searchWithPlaces(services, '부산', '', 4), /페이지/);
+});
+
+test('빈 검색은 빈 목록이고 연결 실패·시간 초과는 더미로 대체하지 않는다', async () => {
+  const makeServices = status => ({ Status: { OK: 'OK', ZERO_RESULT: 'ZERO' }, Places: class {
+    keywordSearch(query, callback) { if (status) callback([], status); }
+  } });
+  assert.deepEqual((await searchWithPlaces(makeServices('ZERO'), '없는지역')).restaurants, []);
+  await assert.rejects(searchWithPlaces(makeServices('ERROR'), '부산'), /검색에 실패/);
+  await assert.rejects(searchWithPlaces(makeServices(null), '부산', '', 1, { timeoutMs: 5 }), /시간이 초과/);
 });
 
 test('검색어·선택 음식점·북마크 출처가 새로고침용 상태로 보존된다', () => {

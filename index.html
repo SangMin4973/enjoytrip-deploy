@@ -18,7 +18,7 @@
   <body class="auth-screen">
   <section id="login" data-page class="login-page" data-background="map">
     <div class="background-layer" aria-hidden="true"><div class="pixel-map"></div><div id="kakao-map"></div></div>
-    <canvas id="food-canvas" aria-label="떨어지는 음식 잡기" role="button" tabindex="0"></canvas>
+    <canvas id="food-canvas" aria-hidden="true"></canvas>
     <header class="brand">
       <a href="#login" aria-label="맛집기행 처음 화면"><h1>맛집기행<span class="brand-period">!</span></h1></a>
       <p>취향 따라 떠나는 맛있는 여행</p>
@@ -40,10 +40,6 @@
       </div>
     </section>
     <footer class="page-footer"><span>© 2026 맛집기행</span><span>매일 새로운 맛을 만나.</span></footer>
-    <aside id="recommendation" class="recommendation" role="status" aria-live="polite" hidden>
-      <div class="recommendation-bar"><span>오늘의 한 끼</span><button type="button" id="close-recommendation" aria-label="음식 추천 닫기">×</button></div>
-      <div class="recommendation-body"><canvas id="caught-food" width="76" height="76" aria-hidden="true"></canvas><div><h3 id="recommended-food"></h3><p id="recommendation-message"></p></div></div>
-    </aside>
     <p class="asset-error" id="asset-error" role="alert" hidden>음식을 불러오지 못했어요. 새로고침해 주세요.</p>
   </section>
 
@@ -53,7 +49,7 @@
     <div class="home-map-wash" aria-hidden="true"></div>
     <header class="explore-header">
       <a class="explore-brand" href="#home">맛집기행<span>!</span></a>
-      <span class="example-badge">예시 데이터</span>
+      <span class="source-badge">카카오맵 장소 검색</span>
       <nav aria-label="맛집기행 메뉴"><button type="button" class="food-button light" id="open-my-page">마이 페이지</button><button type="button" id="workspace-logout" class="text-button">로그아웃</button></nav>
     </header>
 
@@ -64,11 +60,11 @@
         <div class="food-titlebar"><span id="search-title">맛집 찾기</span><span aria-hidden="true">▪ ▪ ▪</span></div>
         <form id="restaurant-search-form" class="restaurant-search-form">
           <label for="search-region">검색 지역 <span class="field-required">필수</span></label>
-          <input id="search-region" name="region" placeholder="예: 광주, 부산, 서울, 제주" list="example-regions" autocomplete="off" maxlength="40" required>
-          <datalist id="example-regions"><option value="광주"><option value="부산"><option value="서울"><option value="제주"></datalist>
+          <input id="search-region" name="region" placeholder="예: 광주 동구, 부산 해운대, 서울 종로" list="search-regions" autocomplete="off" maxlength="40" required>
+          <datalist id="search-regions"><option value="광주광역시"><option value="부산 해운대"><option value="서울 종로"><option value="제주"></datalist>
           <label for="search-menu">음식 메뉴 <span class="optional-label">선택</span></label>
           <input id="search-menu" name="menu" placeholder="예: 치킨, 피자, 불고기" maxlength="60" autocomplete="off">
-          <p class="input-hint">메뉴는 안 적어도 괜찮아요.</p>
+          <p class="input-hint">지역을 구체적으로 적으면 더 정확해요. 메뉴는 선택이에요.</p>
           <button type="submit" id="restaurant-search-submit" class="food-button red">맛집 찾기 <span aria-hidden="true">→</span></button>
           <p id="search-feedback" role="status" aria-live="polite" hidden></p>
         </form>
@@ -81,17 +77,21 @@
         <div class="food-titlebar"><a href="#home" aria-label="검색 화면으로 돌아가기">←</a><span>맛집 찾기</span><span aria-hidden="true">▪ ▪ ▪</span></div>
         <div class="result-heading"><span id="results-source" class="eyebrow">검색한 맛집</span><h2 id="results-heading"></h2><p id="results-count" role="status" aria-live="polite"></p></div>
         <div id="restaurant-list" class="restaurant-list"></div>
+        <p id="results-notice" class="results-notice"></p>
+        <div id="search-pagination" class="search-pagination" hidden><button id="previous-restaurants" type="button" class="food-button light">이전</button><span id="search-page-label"></span><button id="next-restaurants" type="button" class="food-button light">다음</button></div>
         <div class="list-bottom">별표를 눌러 나만의 맛집을 모아보세요.</div>
       </section>
 
-      <!-- 3번: 네이버 검색 → 최대 5개 영상 → 유튜브 검색 → 구글 내용 → 구글 검색 순서. -->
+      <!-- 3번: 실제 장소 상세 페이지와 음식점별 외부 검색 링크. -->
       <aside id="restaurant-insights" class="food-window insight-panel" aria-labelledby="insight-heading" hidden>
         <div class="food-titlebar"><span>맛집 인사이트</span><button type="button" id="close-insights" aria-label="음식점 인사이트 닫기">×</button></div>
         <div class="insight-scroll">
-          <div class="insight-intro"><span class="eyebrow">예시 음식점</span><h2 id="insight-heading"></h2><p id="insight-address"></p><p id="insight-description"></p></div>
+          <div class="insight-intro"><span class="eyebrow">카카오 장소 정보</span><h2 id="insight-heading"></h2><p id="insight-address"></p><p id="insight-description"></p></div>
+          <a id="kakao-place-link" class="food-button light full-width" target="_blank" rel="noopener noreferrer">카카오맵에서 상세 정보 보기 ↗</a>
+          <p class="source-caption">사진·별점·리뷰·영업시간은 카카오맵 상세 페이지에서 확인해 주세요.</p>
           <a id="naver-search" class="food-button naver-button" target="_blank" rel="noopener noreferrer">네이버로 검색하기 <span aria-hidden="true">↗</span></a>
-          <section class="insight-section" aria-labelledby="youtube-heading"><div class="insight-section-title"><h3 id="youtube-heading">유튜브 영상</h3><span id="video-count"></span></div><p class="example-caption">매장 방문 영상 대신 메뉴 레시피 예시를 보여드려요.</p><div id="video-list" class="video-list"></div><a id="youtube-search" class="food-button light full-width" target="_blank" rel="noopener noreferrer">유튜브 검색 가기 ↗</a></section>
-          <section class="insight-section" aria-labelledby="google-heading"><div class="insight-section-title"><h3 id="google-heading">구글 검색</h3><span>내용 예시</span></div><div id="google-results" class="google-results"></div><a id="google-search" class="food-button light full-width" target="_blank" rel="noopener noreferrer">구글 검색 가기 ↗</a></section>
+          <section class="insight-section" aria-labelledby="youtube-heading"><div class="insight-section-title"><h3 id="youtube-heading">관련 유튜브 영상</h3><span id="video-count"></span></div><p id="video-query" class="source-caption">지역과 지역명과 가게 이름으로 검색한 영상이에요. 해당 매장을 다루는 영상인지 확인해 주세요.</p><p id="video-feedback" class="source-caption" role="status" aria-live="polite"></p><div id="video-list" class="video-list"></div><button id="retry-videos" type="button" class="food-button light video-retry" hidden>영상 다시 검색</button><a id="youtube-search" class="food-button light full-width" target="_blank" rel="noopener noreferrer">유튜브 검색 가기 ↗</a></section>
+          <section class="insight-section" aria-labelledby="google-heading"><div class="insight-section-title"><h3 id="google-heading">구글 검색</h3></div><a id="google-search" class="food-button light full-width" target="_blank" rel="noopener noreferrer">구글 검색 가기 ↗</a></section>
         </div>
       </aside>
     </div>
@@ -119,9 +119,14 @@
     <form id="password-confirm-form" class="food-dialog-body"><h2 id="password-confirm-title">비밀번호 확인</h2><p class="dialog-hint">계정 비밀번호를 확인해 주세요.</p><label for="my-page-password">비밀번호</label><input id="my-page-password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128"><p id="password-confirm-feedback" role="alert" hidden></p><button type="submit" class="food-button red full-width">확인</button></form>
   </dialog>
 
+  <dialog id="bookmark-name-dialog" class="food-dialog" aria-labelledby="bookmark-name-title">
+    <div class="food-titlebar"><span id="bookmark-name-title">새 북마크</span><button type="button" data-close-dialog="bookmark-name-dialog" aria-label="북마크 이름 입력 닫기">×</button></div>
+    <form id="bookmark-name-form" class="food-dialog-body"><label for="new-bookmark-name">북마크 이름</label><input id="new-bookmark-name" name="name" type="text" maxlength="40" required placeholder="예: 부산 여행 맛집"><p id="bookmark-name-feedback" class="dialog-hint" role="alert" hidden></p><button type="submit" class="food-button red full-width bookmark-name-submit">만들기</button></form>
+  </dialog>
+
   <dialog id="video-dialog" class="food-dialog video-dialog" aria-labelledby="video-dialog-title">
-    <div class="food-titlebar"><span id="video-dialog-title">예시 레시피 영상</span><button type="button" data-close-dialog="video-dialog" aria-label="영상 닫기">×</button></div>
-    <iframe id="example-video-player" title="선택한 예시 유튜브 영상" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    <div class="food-titlebar"><span id="video-dialog-title">유튜브 영상</span><button type="button" data-close-dialog="video-dialog" aria-label="영상 닫기">×</button></div>
+    <iframe id="youtube-video-player" title="선택한 유튜브 영상" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     <a id="video-watch-link" target="_blank" rel="noopener noreferrer">유튜브에서 직접 보기 ↗</a>
   </dialog>
 

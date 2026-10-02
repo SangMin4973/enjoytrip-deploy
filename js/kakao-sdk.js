@@ -1,18 +1,18 @@
 let loading;
 
-// 로그인 배경과 관광정보 지도에서 SDK를 한 번만 불러옵니다.
+// 모든 지도와 실제 장소 검색에서 services를 포함한 SDK를 공유합니다.
 export function loadKakaoSdk(key) {
   if (window.kakao?.maps?.Map) return Promise.resolve(window.kakao.maps);
   if (loading) return loading;
   if (!key) return Promise.reject(new Error('지도 키가 없습니다.'));
   loading = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    const timeout = setTimeout(() => reject(new Error('지도 로딩 시간 초과')), 10000);
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${encodeURIComponent(key)}`;
+    const fail = message => { clearTimeout(timeout); script.remove(); reject(new Error(message)); };
+    const timeout = setTimeout(() => fail('카카오맵 로딩 시간이 초과됐어요. 다시 시도해 주세요.'), 10000);
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&libraries=services&appkey=${encodeURIComponent(key)}`;
     script.onload = () => {
       if (!window.kakao?.maps?.load) {
-        clearTimeout(timeout);
-        reject(new Error('지도 SDK 오류'));
+        fail('카카오맵 SDK를 불러오지 못했어요. 앱 권한과 등록 도메인을 확인해 주세요.');
         return;
       }
       window.kakao.maps.load(() => {
@@ -20,8 +20,8 @@ export function loadKakaoSdk(key) {
         resolve(window.kakao.maps);
       });
     };
-    script.onerror = () => { clearTimeout(timeout); reject(new Error('지도 SDK 오류')); };
+    script.onerror = () => fail('카카오맵 SDK를 불러오지 못했어요. 앱 권한과 등록 도메인을 확인해 주세요.');
     document.head.append(script);
-  });
+  }).catch(error => { loading = undefined; throw error; });
   return loading;
 }

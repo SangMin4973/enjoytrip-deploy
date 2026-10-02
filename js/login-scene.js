@@ -6,28 +6,10 @@ export function initLoginScene() {
   const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
   const crops=[[76,98,370,377],[403,101,701,377],[742,139,1035,377],[1107,126,1372,378],[77,449,371,664],[421,453,710,682],[760,427,1028,704],[1091,424,1365,697],[78,754,371,1007],[444,778,661,967],[803,793,985,988]];
   const sprite=new Image();sprite.src='resources/food-login/food-reference.png';
-  let width=0,height=0,bodies=[],lastTime=0,totalTime=0,recycled=0,grabbed=null,grabPointer=null,recommendationTimer=null,lastRecommendation=-1,mapStatus='pending';
+  let width=0,height=0,bodies=[],lastTime=0,totalTime=0,recycled=0,grabbed=null,grabPointer=null,mapStatus='pending';
   const random=(min,max)=>min+Math.random()*(max-min),gravity=350;
   let active=!page.hidden,frameId=0,map=null,mapStarted=false,mapKey=LOGIN_MAP_CONFIG.appKey;
   const masks=[];
-  const recommendations=[
-    {name:'바삭한 치킨',message:'오늘은 바삭한 치킨 한 마리 어때요?'},
-    {name:'치즈 듬뿍 피자',message:'쭉 늘어나는 치즈로 기분까지 채워봐요.'},
-    {name:'노릇한 삼겹살',message:'쌈 한 장에 행복을 가득 담아보세요.'},
-    {name:'따끈한 국밥',message:'뜨끈한 국물로 든든한 한 끼를 챙겨요.'},
-    {name:'달콤한 불고기',message:'밥 한 공기 뚝딱! 오늘은 불고기예요.'},
-    {name:'매콤한 떡볶이',message:'매콤한 한 입이 필요한 날이네요.'},
-    {name:'고소한 김밥',message:'한 줄에 담긴 맛으로 가볍게 떠나요.'},
-    {name:'얼큰한 부대찌개',message:'보글보글, 함께 먹으면 더 맛있어요.'},
-    {name:'철판 닭갈비',message:'매콤한 닭갈비에 볶음밥까지 잊지 마세요.'},
-    {name:'바삭한 돈가스',message:'바삭한 소리와 함께 맛있는 한 끼!'},
-    {name:'시원한 냉면',message:'후루룩, 오늘은 시원한 면이 당겨요.'},
-    {name:'육즙 가득 만두',message:'한 입 베어 물면 맛있는 여행이 시작돼요.'},
-    {name:'고소한 계란볶음밥',message:'친숙한 맛으로 오늘을 든든하게 채워요.'},
-    {name:'따끈한 순두부찌개',message:'몽글몽글한 순두부와 따뜻한 한 끼.'},
-    {name:'든든한 비빔밥',message:'알록달록한 맛을 한 그릇에 비벼보세요.'},
-    {name:'직화 제육볶음',message:'불맛 나는 제육에 밥 한 공기, 완벽해요.'}
-  ];
   function newBody(initial=false){
     const size=width<600?random(48,73):random(65,100),y=initial?random(-height*.2,height):random(-200,-size);
     return{x:random(size*.6,width-size*.6),y,size,vx:random(-14,14),vy:initial?Math.sqrt(Math.max(0,y)*gravity*2)+20:random(5,35),angle:random(-.65,.65),spin:random(-.2,.2),cell:Math.floor(random(0,crops.length)),holdUntil:0,held:false};
@@ -52,16 +34,9 @@ export function initLoginScene() {
     }return null;
   }
   function point(event){const r=canvas.getBoundingClientRect();return{x:(event.clientX-r.left)*width/r.width,y:(event.clientY-r.top)*height/r.height};}
-  function recommend(body){
-    let index=Math.floor(random(0,recommendations.length));if(index===lastRecommendation)index=(index+1)%recommendations.length;lastRecommendation=index;
-    const item=recommendations[index];document.querySelector('#recommended-food').textContent=item.name;document.querySelector('#recommendation-message').textContent=item.message;
-    const preview=document.querySelector('#caught-food'),previewCtx=preview.getContext('2d');previewCtx.clearRect(0,0,76,76);previewCtx.imageSmoothingEnabled=false;draw({...body,x:38,y:38,angle:0},previewCtx,69);
-    const toast=document.querySelector('#recommendation');toast.hidden=false;clearTimeout(recommendationTimer);recommendationTimer=setTimeout(()=>{toast.hidden=true;},5000);
-    return{name:item.name,message:item.message};
-  }
   canvas.addEventListener('pointerdown',event=>{
     const p=point(event),body=hitBody(p.x,p.y);if(!body)return;
-    grabbed=body;grabPointer=event.pointerId;body.held=true;body.holdUntil=totalTime+2.8;canvas.setPointerCapture(event.pointerId);canvas.style.cursor='grabbing';recommend(body);render();
+    grabbed=body;grabPointer=event.pointerId;body.held=true;body.holdUntil=totalTime+2.8;canvas.setPointerCapture(event.pointerId);canvas.style.cursor='grabbing';render();
   });
   canvas.addEventListener('pointermove',event=>{
     const p=point(event);
@@ -70,12 +45,6 @@ export function initLoginScene() {
   });
   function release(event){if(grabbed&&event.pointerId===grabPointer){grabbed.held=false;grabbed.holdUntil=totalTime+1.7;grabbed.vy=60;grabbed=null;grabPointer=null;canvas.style.cursor='grab';}}
   canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);
-  canvas.addEventListener('keydown',event=>{
-    if(!['Enter',' '].includes(event.key))return;
-    event.preventDefault();const body=bodies.find(b=>b.y>b.size&&b.y<height-b.size);
-    if(body){body.holdUntil=totalTime+2;recommend(body);render();}
-  });
-  document.querySelector('#close-recommendation').addEventListener('click',()=>{document.querySelector('#recommendation').hidden=true;clearTimeout(recommendationTimer);});
   async function loadKakaoMap(){
     if(mapStarted||!active)return;
     mapStarted=true;mapStatus='loading';
@@ -121,8 +90,7 @@ export function initLoginScene() {
       if(active){resize();loadKakaoMap();frameId=requestAnimationFrame(frame);}
       else{
         if(grabbed)grabbed.held=false;
-        grabbed=null;grabPointer=null;clearTimeout(recommendationTimer);
-        document.querySelector('#recommendation').hidden=true;
+        grabbed=null;grabPointer=null;
       }
     }
   };

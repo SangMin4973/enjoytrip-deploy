@@ -4,6 +4,8 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { tourRoute } from './server/tour.js';
+import { createYoutubeSearch } from './server/youtube.js';
+import { createRestaurantImageSearch } from './server/restaurant-images.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 if (existsSync(path.join(root, '.env'))) process.loadEnvFile(path.join(root, '.env'));
@@ -15,19 +17,30 @@ function json(response, status, value) {
 }
 
 // 실행과 API 키 중계만 담당합니다. 회원 인증/DB 서버는 구현하지 않습니다.
-export function makeServer({ tourOptions = {} } = {}) {
+export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions = {} } = {}) {
+  const searchYoutube = createYoutubeSearch(youtubeOptions);
+  const searchImage = createRestaurantImageSearch(imageOptions);
   return createServer(async (request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     if (!['GET', 'HEAD'].includes(request.method)) { json(response, 405, { error: '지원하지 않는 요청입니다.' }); return; }
     try {
       const url = new URL(request.url, 'http://localhost');
       if (url.pathname === '/api/config') {
-        json(response, 200, { tourApiConfigured: !!process.env.TOUR_API_SERVICE_KEY?.trim(), kakaoMapJsKey: process.env.KAKAO_MAP_JS_KEY || '' });
+        json(response, 200, { tourApiConfigured: !!process.env.TOUR_API_SERVICE_KEY?.trim(), kakaoMapJsKey: process.env.KAKAO_MAP_JS_KEY || '',
+          restaurantImagesConfigured: !!(process.env.GOOGLE_CUSTOM_SEARCH_API_KEY?.trim() && process.env.GOOGLE_CUSTOM_SEARCH_CX?.trim()) });
         return;
       }
       if (url.pathname.startsWith('/api/tour/')) {
         const result = await tourRoute(url.pathname, url.searchParams, tourOptions);
         json(response, result === null ? 404 : 200, result ?? { error: '없는 API입니다.' });
+        return;
+      }
+      if (url.pathname === '/api/youtube/search') {
+        json(response, 200, await searchYoutube(url.searchParams.get('q')));
+        return;
+      }
+      if (url.pathname === '/api/restaurant-image') {
+        json(response, 200, await searchImage(url.searchParams.get('q')));
         return;
       }
       const pathname = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname);
@@ -43,7 +56,7 @@ export function makeServer({ tourOptions = {} } = {}) {
     } catch (error) {
       json(response, error.code === 'ENOENT' ? 404 : error.status || 400, {
         error: error.code === 'ENOENT' ? '파일을 찾을 수 없습니다.' : error.message,
-        ...(error.name === 'TourApiError' ? { code: error.code } : {}),
+        ...(['TourApiError', 'YoutubeApiError', 'ImageSearchError'].includes(error.name) ? { code: error.code } : {}),
       });
     }
   });

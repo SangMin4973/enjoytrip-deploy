@@ -129,15 +129,7 @@ body.auth-screen {
 .login-page .bottom-blocks { color: #dbaf58; font-size: 17px; letter-spacing: 2px; line-height: 1; }
 .login-page .page-footer { position: absolute; bottom: 28px; left: 35px; right: 35px; display: flex; justify-content: space-between; align-items: center; gap: 20px; z-index: 1; }
 .login-page .page-footer > span { font-size: 12px; color: #af6d36; }
-.login-page .recommendation { position: fixed; z-index: 8; width: 350px; max-width: calc(100vw - 32px); right: 28px; bottom: 98px; border: 3px solid var(--deep-red); box-shadow: 5px 5px 0 #b35e2833; background: var(--paper); animation: recommendation-pop .18s steps(3,end); }
-.login-page .recommendation-bar { display: flex; align-items: center; justify-content: space-between; background: var(--red); border-bottom: 2px solid var(--deep-red); padding: 7px 11px; color: #fff5c5; font-size: 13px; }
-.login-page .recommendation-bar button { border: 0; background: transparent; color: #fff5c5; font-size: 24px; line-height: 1; padding: 0 2px; }
-.login-page .recommendation-body { padding: 17px; display: flex; align-items: center; gap: 14px; }
-.login-page .recommendation-body canvas { image-rendering: pixelated; flex-shrink: 0; width: 65px; height: 65px; }
-.login-page .recommendation h3 { font-size: 21px; font-weight: 700; color: var(--deep-red); line-height: 1.5; margin: 0 0 6px; }
-.login-page .recommendation p { font-size: 13px; line-height: 1.8; margin: 0; color: #a16d35; }
 .login-page .asset-error { position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%); padding: 12px; background: var(--paper); border: 2px solid var(--red); font-size: 14px; z-index: 10; }
-@keyframes recommendation-pop { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @media (min-height: 950px) {
   .login-page { padding-top: calc(12vh - 30px); }
   .login-page .brand { margin-bottom: 46px; }
@@ -155,11 +147,6 @@ body.auth-screen {
   .login-page .page-footer { left: 22px; right: 22px; bottom: 28px; justify-content: center; gap: 17px; }
   .login-page .page-footer > span { font-size: 10px; }
   .login-page .page-footer > span:last-child { display: none; }
-  .login-page .recommendation { right: 16px; bottom: 87px; width: calc(100% - 32px); max-width: 355px; }
-  .login-page .recommendation-body { padding: 13px 15px; }
-  .login-page .recommendation h3 { font-size: 20px; }
-  .login-page .recommendation p { font-size: 12px; }
-  .login-page .recommendation-body canvas { width: 59px; height: 59px; }
 }
 @media (max-width: 350px) {
   .login-page { padding-left: 17px; padding-right: 21px; }

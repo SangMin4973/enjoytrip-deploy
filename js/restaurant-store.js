@@ -1,20 +1,16 @@
 import { readStorage, writeStorage } from './storage.js';
-import { createExampleRestaurants } from './restaurant-data.js';
 
-// 예시 음식점과 검색 상태는 공통 저장소, 북마크는 회원 아이디별로 분리합니다.
+// 실제 장소 정보를 따로 저장합니다. 이전 예시 카탈로그와 회원별 북마크는 보존합니다.
 export function loadRestaurants() {
-  const existing = readStorage('restaurantCatalog', null);
-  if (existing !== null) {
-    if (!Array.isArray(existing)) throw new Error('음식점 저장 데이터의 형식이 올바르지 않습니다.');
-    return existing;
-  }
-  const restaurants = createExampleRestaurants();
-  writeStorage('restaurantCatalog', restaurants);
-  return restaurants;
+  const existing = readStorage('kakaoRestaurantCatalog', []);
+  if (!Array.isArray(existing)) throw new Error('음식점 저장 데이터의 형식이 올바르지 않습니다.');
+  return existing.filter(item => item?.source === 'kakao' && /^kakao-\d+$/.test(item.id));
 }
 
-export function saveRestaurantImages(restaurants) {
-  writeStorage('restaurantCatalog', restaurants);
+export function saveRestaurants(restaurants) {
+  const catalog = new Map(loadRestaurants().map(item => [item.id, item]));
+  restaurants.forEach(item => { if (item.source === 'kakao') catalog.set(item.id, item); });
+  writeStorage('kakaoRestaurantCatalog', [...catalog.values()]);
 }
 
 export function loadView() {
