@@ -9,6 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/login.css">
+    <link rel="stylesheet" href="./css/restaurants.css">
     <link rel="preload" href="./resources/food-login/fonts/Galmuri11.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="./resources/food-login/fonts/Galmuri11-Bold.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23df402c' d='M4 0h24v4h4v24h-4v4H4v-4H0V4h4z'/%3E%3Cpath d='M8 9h4l4 5 4-5h4v15h-4v-9l-4 5-4-5v9H8z' fill='%23ffe67d'/%3E%3C/svg%3E">
@@ -46,11 +47,89 @@
     <p class="asset-error" id="asset-error" role="alert" hidden>음식을 불러오지 못했어요. 새로고침해 주세요.</p>
   </section>
 
+  <!-- 로그인 이후의 검색·목록·북마크 화면은 같은 지도와 헤더를 공유합니다. -->
+  <section id="explore" data-page class="explore-page" data-view="home" hidden>
+    <div class="explore-map-stage"><div class="explore-map-fallback" aria-hidden="true"></div><div id="explore-map" aria-label="음식점 위치 지도"></div></div>
+    <div class="home-map-wash" aria-hidden="true"></div>
+    <header class="explore-header">
+      <a class="explore-brand" href="#home">맛집기행<span>!</span></a>
+      <span class="example-badge">예시 데이터</span>
+      <nav aria-label="맛집기행 메뉴"><button type="button" class="food-button light" id="open-my-page">마이 페이지</button><button type="button" id="workspace-logout" class="text-button">로그아웃</button></nav>
+    </header>
+
+    <!-- 1번: 지역 필수, 메뉴 선택인 가운데 검색 창. -->
+    <div id="search-home" class="search-home">
+      <div class="home-intro"><p>취향 따라 떠나는 맛있는 여행</p><h1>오늘은 어디서<br><span>맛있는 한 끼?</span></h1></div>
+      <section class="food-window search-window" aria-labelledby="search-title">
+        <div class="food-titlebar"><span id="search-title">맛집 찾기</span><span aria-hidden="true">▪ ▪ ▪</span></div>
+        <form id="restaurant-search-form" class="restaurant-search-form">
+          <label for="search-region">검색 지역 <span class="field-required">필수</span></label>
+          <input id="search-region" name="region" placeholder="예: 광주, 부산, 서울, 제주" list="example-regions" autocomplete="off" maxlength="40" required>
+          <datalist id="example-regions"><option value="광주"><option value="부산"><option value="서울"><option value="제주"></datalist>
+          <label for="search-menu">음식 메뉴 <span class="optional-label">선택</span></label>
+          <input id="search-menu" name="menu" placeholder="예: 치킨, 피자, 불고기" maxlength="60" autocomplete="off">
+          <p class="input-hint">메뉴는 안 적어도 괜찮아요.</p>
+          <button type="submit" id="restaurant-search-submit" class="food-button red">맛집 찾기 <span aria-hidden="true">→</span></button>
+          <p id="search-feedback" role="status" aria-live="polite" hidden></p>
+        </form>
+      </section>
+    </div>
+
+    <!-- 2번: 독립적으로 스크롤되는 음식점 목록. 3번 패널을 열어도 목록은 유지됩니다. -->
+    <div id="results-pane" class="results-pane" hidden>
+      <section class="food-window restaurant-list-panel" aria-labelledby="results-heading">
+        <div class="food-titlebar"><a href="#home" aria-label="검색 화면으로 돌아가기">←</a><span>맛집 찾기</span><span aria-hidden="true">▪ ▪ ▪</span></div>
+        <div class="result-heading"><span id="results-source" class="eyebrow">검색한 맛집</span><h2 id="results-heading"></h2><p id="results-count" role="status" aria-live="polite"></p></div>
+        <div id="restaurant-list" class="restaurant-list"></div>
+        <div class="list-bottom">별표를 눌러 나만의 맛집을 모아보세요.</div>
+      </section>
+
+      <!-- 3번: 네이버 검색 → 최대 5개 영상 → 유튜브 검색 → 구글 내용 → 구글 검색 순서. -->
+      <aside id="restaurant-insights" class="food-window insight-panel" aria-labelledby="insight-heading" hidden>
+        <div class="food-titlebar"><span>맛집 인사이트</span><button type="button" id="close-insights" aria-label="음식점 인사이트 닫기">×</button></div>
+        <div class="insight-scroll">
+          <div class="insight-intro"><span class="eyebrow">예시 음식점</span><h2 id="insight-heading"></h2><p id="insight-address"></p><p id="insight-description"></p></div>
+          <a id="naver-search" class="food-button naver-button" target="_blank" rel="noopener noreferrer">네이버로 검색하기 <span aria-hidden="true">↗</span></a>
+          <section class="insight-section" aria-labelledby="youtube-heading"><div class="insight-section-title"><h3 id="youtube-heading">유튜브 영상</h3><span id="video-count"></span></div><p class="example-caption">매장 방문 영상 대신 메뉴 레시피 예시를 보여드려요.</p><div id="video-list" class="video-list"></div><a id="youtube-search" class="food-button light full-width" target="_blank" rel="noopener noreferrer">유튜브 검색 가기 ↗</a></section>
+          <section class="insight-section" aria-labelledby="google-heading"><div class="insight-section-title"><h3 id="google-heading">구글 검색</h3><span>내용 예시</span></div><div id="google-results" class="google-results"></div><a id="google-search" class="food-button light full-width" target="_blank" rel="noopener noreferrer">구글 검색 가기 ↗</a></section>
+        </div>
+      </aside>
+    </div>
+
+    <!-- 4번: 비밀번호 확인 후 접근하는 개인 북마크 화면. -->
+    <section id="bookmark-page" class="bookmark-page" aria-labelledby="bookmarks-heading" hidden>
+      <div class="bookmark-page-heading"><div><span class="eyebrow">MY PAGE</span><h1 id="bookmarks-heading">내가 모은 맛집</h1><p id="bookmark-owner"></p></div><a href="#profile" class="food-button light">개인 정보 수정</a></div>
+      <div class="bookmark-toolbar"><h2>북마크 <span id="bookmark-total"></span></h2><button type="button" class="food-button red" id="add-my-bookmark">＋ 북마크 추가하기</button></div>
+      <div id="my-bookmarks" class="bookmark-grid"></div>
+      <a href="#home" class="back-to-search">← 맛집 찾기로 돌아가기</a>
+    </section>
+    <p id="explore-map-message" class="explore-map-message" role="status" hidden></p>
+    <p id="explore-toast" class="explore-toast" role="status" aria-live="polite" hidden></p>
+    <footer class="explore-footer" id="explore-footer">© 2026 맛집기행</footer>
+  </section>
+
+  <!-- native dialog가 지도와 목록 위에 어두운 backdrop을 만들고 키보드 포커스를 가둡니다. -->
+  <dialog id="save-bookmark-dialog" class="food-dialog" aria-labelledby="save-bookmark-title">
+    <div class="food-titlebar"><span id="save-bookmark-title">북마크에 담기</span><button type="button" data-close-dialog="save-bookmark-dialog" aria-label="북마크 선택 닫기">×</button></div>
+    <div class="food-dialog-body"><h2 id="bookmark-restaurant-name"></h2><p class="dialog-hint">담아둘 북마크를 선택해 주세요.</p><div id="bookmark-options" class="bookmark-options"></div><button type="button" class="add-bookmark-button" id="add-bookmark-from-dialog">＋ 북마크 추가하기</button></div>
+  </dialog>
+
+  <dialog id="password-confirm-dialog" class="food-dialog" aria-labelledby="password-confirm-title">
+    <div class="food-titlebar"><span>마이 페이지</span><button type="button" data-close-dialog="password-confirm-dialog" aria-label="비밀번호 확인 닫기">×</button></div>
+    <form id="password-confirm-form" class="food-dialog-body"><h2 id="password-confirm-title">비밀번호 확인</h2><p class="dialog-hint">계정 비밀번호를 확인해 주세요.</p><label for="my-page-password">비밀번호</label><input id="my-page-password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128"><p id="password-confirm-feedback" role="alert" hidden></p><button type="submit" class="food-button red full-width">확인</button></form>
+  </dialog>
+
+  <dialog id="video-dialog" class="food-dialog video-dialog" aria-labelledby="video-dialog-title">
+    <div class="food-titlebar"><span id="video-dialog-title">예시 레시피 영상</span><button type="button" data-close-dialog="video-dialog" aria-label="영상 닫기">×</button></div>
+    <iframe id="example-video-player" title="선택한 예시 유튜브 영상" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    <a id="video-watch-link" target="_blank" rel="noopener noreferrer">유튜브에서 직접 보기 ↗</a>
+  </dialog>
+
     <header id="app-header" hidden>
       <h1>맛집기행</h1>
       <p>취향 따라 떠나는 맛있는 여행</p>
       <nav aria-label="메인 메뉴">
-        <a href="#tour">관광정보 조회</a>
+        <a href="#home">맛집 찾기</a>
         <a href="#join" data-guest>회원가입</a>
         <a href="#login" data-guest>로그인</a>
         <a href="#reset">비밀번호 찾기</a>
@@ -117,7 +196,8 @@
       </section>
 
       <section id="profile" data-page hidden>
-        <h2>내 정보</h2>
+        <h2>개인 정보 수정</h2>
+        <p><a href="#bookmarks">← 내 북마크로 돌아가기</a></p>
         <form id="profile-form" class="account-form">
           <label>아이디 <input name="id" class="form-control" readonly></label>
           <label>이름 <input name="name" class="form-control" required maxlength="30" autocomplete="name"></label>

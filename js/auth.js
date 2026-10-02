@@ -66,12 +66,32 @@ export async function login(identifier, password, { remember = true } = {}) {
   const duration = (remember ? 30 * 24 : 12) * 60 * 60 * 1000;
   writeStorage('sessionExpiresAt', Date.now() + duration);
   writeStorage('session', user.id);
+  removeStorage('myPageAccess');
   return publicUser(user);
 }
 
 export function logout() {
   removeStorage('session');
   removeStorage('sessionExpiresAt');
+  removeStorage('myPageAccess');
+}
+
+// 마이페이지 확인은 현재 회원의 해시만 비교합니다. 로그인 만료 시간을 연장하지 않습니다.
+export async function confirmMyPage(password) {
+  const current = currentUser();
+  if (!current) throw new Error('먼저 로그인해 주세요.');
+  const user = users().find(entry => entry.id === current.id);
+  if ((await passwordRecord(password, user.salt)).passwordHash !== user.passwordHash) {
+    throw new Error('비밀번호가 일치하지 않습니다.');
+  }
+  if (currentUser()?.id !== current.id) throw new Error('로그인 상태가 변경되었습니다. 다시 확인해 주세요.');
+  writeStorage('myPageAccess', { userId: current.id, sessionExpiresAt: readStorage('sessionExpiresAt', null) });
+}
+
+export function isMyPageConfirmed() {
+  const current = currentUser();
+  const access = readStorage('myPageAccess', null);
+  return !!current && access?.userId === current.id && access.sessionExpiresAt === readStorage('sessionExpiresAt', null);
 }
 
 export async function updateProfile({ name, email, password }) {
@@ -85,6 +105,7 @@ export async function updateProfile({ name, email, password }) {
     throw new Error('이미 등록된 이메일입니다.');
   }
   writeStorage('users', all.map((entry) => entry.id === user.id ? { ...entry, name, email, ...record } : entry));
+  if (password) removeStorage('myPageAccess');
   return currentUser();
 }
 

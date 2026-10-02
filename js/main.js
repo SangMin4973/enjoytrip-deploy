@@ -4,11 +4,15 @@ import * as auth from './auth.js';
 import { initMap, updateMap } from './map.js';
 import { initLoginScene } from './login-scene.js';
 import { LOGIN_MAP_CONFIG } from './map-config.js';
+import { initRestaurantApp } from './restaurant-app.js';
+import { removeUserBookmarks } from './restaurant-store.js';
 
 const $ = (selector) => document.querySelector(selector);
 const typeName = (code) => CONTENT_TYPES.find((type) => type.code === code)?.name || '기타';
 const state = { mode: 'sample', page: 1, size: 10, total: 0, items: [], filters: null, revision: 0, detailRevision: 0 };
 const loginScene = initLoginScene();
+const restaurantApp = initRestaurantApp();
+window.restaurantDemo = { get status() { return restaurantApp.status; } };
 let configReady = false;
 let tourInitialized = false;
 let mapKey = LOGIN_MAP_CONFIG.appKey;
@@ -39,23 +43,35 @@ function refreshSession() {
 }
 
 function showPage() {
-  const known = ['tour', 'join', 'login', 'profile', 'reset'];
+  // home/results/bookmarks는 동일한 explore DOM을 공유하고 내부 패널만 전환합니다.
+  const known = ['home', 'results', 'bookmarks', 'tour', 'join', 'login', 'profile', 'reset'];
   const user = auth.currentUser();
-  const defaultPage = user ? 'tour' : 'login';
+  const defaultPage = user ? 'home' : 'login';
   let page = location.hash.slice(1) || defaultPage;
   if (!known.includes(page)) page = defaultPage;
-  if (['tour', 'profile'].includes(page) && !user) {
+  if (['home', 'results', 'bookmarks', 'tour', 'profile'].includes(page) && !user) {
     page = 'login';
     history.replaceState(null, '', '#login');
     notify('로그인 후 맛있는 여행을 시작해 주세요.');
   }
-  document.querySelectorAll('section[data-page]').forEach((element) => { element.hidden = element.id !== page; });
+  // URL을 직접 입력한 경우에도 마이페이지 비밀번호 확인을 건너뛰지 않습니다.
+  if (['bookmarks', 'profile'].includes(page) && user && !auth.isMyPageConfirmed()) {
+    const requested = page; page = 'home'; history.replaceState(null, '', '#home');
+    restaurantApp.requestMyPage(requested);
+  }
+  const isWorkspace = ['home', 'results', 'bookmarks'].includes(page);
+  const sectionId = isWorkspace ? 'explore' : page;
+  document.querySelectorAll('section[data-page]').forEach((element) => { element.hidden = element.id !== sectionId; });
   const isLogin = page === 'login';
-  $('#app-header').hidden = isLogin;
-  $('#app-main').hidden = isLogin;
+  $('#app-header').hidden = isLogin || isWorkspace;
+  $('#app-main').hidden = isLogin || isWorkspace;
   document.body.classList.toggle('auth-screen', isLogin);
+  document.body.classList.toggle('workspace-screen', isWorkspace);
+  document.body.classList.toggle('account-screen', !isLogin && !isWorkspace && page !== 'tour');
   document.body.dataset.page = page;
   loginScene.setActive(isLogin);
+  if (isWorkspace) restaurantApp.setRoute(page).catch(error => notify(error.message, true));
+  else restaurantApp.deactivate();
   refreshSession();
   if (page === 'tour') {
     if (configReady) initializeTour();
@@ -221,7 +237,7 @@ bindForm('#login-form', async (values, form) => {
   form.reset(); $('#password').type = 'password';
   $('#toggle-password').setAttribute('aria-pressed', 'false');
   $('#toggle-password').setAttribute('aria-label', '비밀번호 보기');
-  location.hash = 'tour'; notify('로그인했습니다.');
+  location.hash = 'home'; notify('로그인했습니다.');
 });
 bindForm('#profile-form', async (values) => { await auth.updateProfile(values); notify('회원정보를 수정했습니다.'); });
 bindForm('#reset-form', async (values, form) => {
@@ -233,13 +249,19 @@ $('#toggle-password').addEventListener('click', (event) => {
   event.currentTarget.setAttribute('aria-pressed', String(visible));
   event.currentTarget.setAttribute('aria-label', visible ? '비밀번호 숨기기' : '비밀번호 보기');
 });
-$('#logout').addEventListener('click', () => {
+function logoutMember() {
   try { auth.logout(); refreshSession(); location.hash = 'login'; notify('로그아웃했습니다.'); }
   catch (error) { notify(error.message, true); }
-});
+}
+$('#logout').addEventListener('click', logoutMember);
+$('#workspace-logout').addEventListener('click', logoutMember);
 $('#delete-account').addEventListener('click', () => {
   if (!confirm('이 브라우저에 저장된 회원정보를 삭제하고 탈퇴할까요?')) return;
-  try { auth.deleteAccount(); refreshSession(); location.hash = 'login'; notify('회원 탈퇴가 완료되었습니다.'); }
+  try {
+    const user = auth.currentUser();
+    if (user) removeUserBookmarks(user.id);
+    auth.deleteAccount(); refreshSession(); location.hash = 'login'; notify('회원 탈퇴가 완료되었습니다.');
+  }
   catch (error) { notify(error.message, true); }
 });
 window.addEventListener('hashchange', () => { try { showPage(); } catch (error) { notify(error.message, true); } });
@@ -256,6 +278,7 @@ async function init() {
   } catch (error) { notify(error.message, true); }
   configReady = true;
   loginScene.configureMap(mapKey);
+  restaurantApp.configureMap(mapKey);
   if (document.body.dataset.page === 'tour') await initializeTour();
 }
 
