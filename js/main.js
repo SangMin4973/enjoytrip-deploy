@@ -44,20 +44,14 @@ function refreshSession() {
 
 function showPage() {
   // home/results/bookmarks는 동일한 explore DOM을 공유하고 내부 패널만 전환합니다.
-  const known = ['home', 'results', 'bookmarks', 'tour', 'join', 'login', 'profile', 'reset'];
+  const known = ['home', 'results', 'bookmarks', 'tour', 'join', 'login', 'reset'];
   const user = auth.currentUser();
   const defaultPage = user ? 'home' : 'login';
   let page = location.hash.slice(1) || defaultPage;
   if (!known.includes(page)) page = defaultPage;
-  if (['home', 'results', 'bookmarks', 'tour', 'profile'].includes(page) && !user) {
-    page = 'login';
+  if (['home', 'results', 'bookmarks', 'tour'].includes(page) && !user) {    page = 'login';
     history.replaceState(null, '', '#login');
     notify('로그인 후 맛있는 여행을 시작해 주세요.');
-  }
-  // URL을 직접 입력한 경우에도 마이페이지 비밀번호 확인을 건너뛰지 않습니다.
-  if (['bookmarks', 'profile'].includes(page) && user && !auth.isMyPageConfirmed()) {
-    const requested = page; page = 'home'; history.replaceState(null, '', '#home');
-    restaurantApp.requestMyPage(requested);
   }
   const isWorkspace = ['home', 'results', 'bookmarks'].includes(page);
   const sectionId = isWorkspace ? 'explore' : page;
@@ -239,7 +233,15 @@ bindForm('#login-form', async (values, form) => {
   $('#toggle-password').setAttribute('aria-label', '비밀번호 보기');
   location.hash = 'home'; notify('로그인했습니다.');
 });
-bindForm('#profile-form', async (values) => { await auth.updateProfile(values); notify('회원정보를 수정했습니다.'); });
+bindForm('#profile-form', async (values) => {
+  await auth.updateProfile(values);
+
+  $('#profile-edit-dialog').close();
+
+  notify('회원정보를 수정했습니다.');
+
+  location.hash = 'bookmarks';
+});
 bindForm('#reset-form', async (values, form) => {
   await auth.resetPassword(values); form.reset(); location.hash = 'login'; notify('비밀번호를 재설정했습니다. 새 비밀번호로 로그인해 주세요.');
 });

@@ -263,9 +263,54 @@ export function initRestaurantApp() {
     } catch (error) { $('#bookmark-name-feedback').textContent = error.message; $('#bookmark-name-feedback').hidden = false; }
   });
 
+  async function shareBookmark(bookmark) {
+    const restaurantList = bookmark.restaurantIds
+      .map(id => restaurants.find(restaurant => restaurant.id === id))
+      .filter(Boolean);
+
+    const restaurantNames = restaurantList.length
+      ? restaurantList.map(restaurant => `• ${restaurant.name}`).join('\n')
+      : '• 아직 저장한 맛집이 없습니다.';
+
+    const shareText =
+      `🍜 ${bookmark.name}\n\n` +
+      `${restaurantNames}\n\n` +
+      `맛집기행에서 만든 맛집 목록입니다.`;
+
+    // 모바일 등 Web Share API를 지원하는 경우
+    if (navigator.share) {
+      await navigator.share({
+        title: bookmark.name,
+        text: shareText
+      });
+
+      return;
+    }
+
+    // 공유 기능이 없는 브라우저에서는 클립보드 복사
+    await navigator.clipboard.writeText(shareText);
+
+    toast('북마크 내용을 클립보드에 복사했어요.');
+  }
   function renderMyBookmarks() {
     const user = member(), bookmarks = store.loadBookmarks(user.id);
-    $('#bookmark-owner').textContent = `${user.name}님이 담아둔 맛집을 다시 만나보세요.`;
+    $('#bookmark-owner').textContent =
+      `${user.name}님이 담아둔 맛집을 다시 만나보세요.`;
+
+    $('#my-profile-name').textContent = user.name;
+    $('#my-profile-id').textContent = `@${user.id}`;
+    $('#my-profile-email').textContent = user.email;
+
+    const createdDate = new Date(user.createdAt);
+    $('#my-profile-created').textContent =
+      createdDate.toLocaleDateString('ko-KR');
+
+    const savedRestaurantIds = new Set(
+      bookmarks.flatMap(bookmark => bookmark.restaurantIds)
+    );
+
+    $('#summary-bookmark-count').textContent = bookmarks.length;
+    $('#summary-restaurant-count').textContent = savedRestaurantIds.size;
     $('#bookmark-total').textContent = `(${bookmarks.length})`;
     const grid = $('#my-bookmarks'); grid.replaceChildren();
     if (!bookmarks.length) {
@@ -273,10 +318,38 @@ export function initRestaurantApp() {
       empty.append(folder, element('h3', '', '아직 모아둔 맛집이 없어요.'), element('p', '', '북마크를 만들고 음식점의 별표를 눌러 담아보세요.')); grid.append(empty);
     }
     bookmarks.forEach(bookmark => {
-      const button = element('button', 'bookmark-card'); button.type = 'button'; button.dataset.bookmarkId = bookmark.id;
-      const folder = element('span', 'pixel-folder'); folder.setAttribute('aria-hidden', 'true');
-      const text = element('div'); text.append(element('h3', '', bookmark.name), element('p', '', `맛집 ${bookmark.restaurantIds.length}곳`));
-      const arrow = element('span', 'bookmark-arrow', '→'); arrow.setAttribute('aria-hidden', 'true'); button.append(folder, text, arrow); grid.append(button);
+      const card = element('article', 'bookmark-card');
+
+      const content = element('button', 'bookmark-card-content');
+      content.type = 'button';
+      content.dataset.action = 'open-bookmark';
+      content.dataset.bookmarkId = bookmark.id;
+
+      const folder = element('span', 'pixel-folder');
+      folder.setAttribute('aria-hidden', 'true');
+
+      const text = element('div', 'bookmark-card-text');
+      text.append(
+        element('h3', '', bookmark.name),
+        element('p', '', `맛집 ${bookmark.restaurantIds.length}곳`)
+      );
+
+      const arrow = element('span', 'bookmark-arrow', '→');
+      arrow.setAttribute('aria-hidden', 'true');
+
+      content.append(folder, text, arrow);
+
+      const actions = element('div', 'bookmark-card-actions');
+
+      const shareButton = element('button', 'bookmark-share-button', '공유하기');
+      shareButton.type = 'button';
+      shareButton.dataset.action = 'share-bookmark';
+      shareButton.dataset.bookmarkId = bookmark.id;
+
+      actions.append(shareButton);
+
+      card.append(content, actions);
+      grid.append(card);
     });
   }
 
@@ -356,23 +429,91 @@ export function initRestaurantApp() {
   });
   $('#add-bookmark-from-dialog').addEventListener('click', createBookmark);
   $('#add-my-bookmark').addEventListener('click', createBookmark);
-  $('#my-bookmarks').addEventListener('click', event => {
-    const button = event.target.closest('button[data-bookmark-id]'); if (!button) return;
+  $('#my-bookmarks').addEventListener('click', async event => {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+
     try {
-      const bookmark = store.loadBookmarks(member().id).find(item => item.id === button.dataset.bookmarkId);
+      const bookmark = store
+        .loadBookmarks(member().id)
+        .find(item => item.id === button.dataset.bookmarkId);
+
       if (!bookmark) return;
-      view = { source: 'bookmark', region: '', menu: '', bookmarkId: bookmark.id, selectedId: null }; store.saveView(view); location.hash = 'results';
-    } catch (error) { toast(error.message); }
+
+      // 북마크 열기
+      if (button.dataset.action === 'open-bookmark') {
+        view = {
+          source: 'bookmark',
+          region: '',
+          menu: '',
+          bookmarkId: bookmark.id,
+          selectedId: null
+        };
+
+        store.saveView(view);
+        location.hash = 'results';
+        return;
+      }
+
+      // 북마크 공유
+      if (button.dataset.action === 'share-bookmark') {
+        await shareBookmark(bookmark);
+      }
+
+    } catch (error) {
+      toast(error.message);
+    }
   });
-  $('#open-my-page').addEventListener('click', () => requestMyPage());
+
+
+  $('#open-my-page').addEventListener('click', () => {location.hash = 'bookmarks';});
+  $('#open-profile-edit').addEventListener('click', () => {requestMyPage('profile');});
   $('#password-confirm-form').addEventListener('submit', async event => {
-    event.preventDefault(); const button = event.currentTarget.querySelector('[type=submit]');
-    button.disabled = true; button.textContent = '확인 중'; $('#password-confirm-feedback').hidden = true;
+    event.preventDefault();
+
+    const button = event.currentTarget.querySelector('[type=submit]');
+
+    button.disabled = true;
+    button.textContent = '확인 중';
+
+    $('#password-confirm-feedback').hidden = true;
+
     try {
-      await auth.confirmMyPage($('#my-page-password').value); $('#password-confirm-form').reset(); $('#password-confirm-dialog').close(); location.hash = confirmTarget;
-    } catch (error) { $('#password-confirm-feedback').textContent = error.message; $('#password-confirm-feedback').hidden = false; }
-    finally { button.disabled = false; button.textContent = '확인'; }
+      // 1. 비밀번호 확인
+      await auth.confirmMyPage(
+        $('#my-page-password').value
+      );
+
+      // 2. 비밀번호 팝업 닫기
+      $('#password-confirm-form').reset();
+      $('#password-confirm-dialog').close();
+
+      // 3. 현재 로그인 사용자 가져오기
+      const user = member();
+
+      // 4. 개인정보 수정 폼에 현재 정보 채우기
+      const form = $('#profile-form');
+
+      form.elements.id.value = user.id;
+      form.elements.name.value = user.name;
+      form.elements.email.value = user.email;
+      form.elements.password.value = '';
+
+      // 5. 개인정보 수정 팝업 열기
+      $('#profile-edit-dialog').showModal();
+
+    } catch (error) {
+      $('#password-confirm-feedback').textContent = error.message;
+      $('#password-confirm-feedback').hidden = false;
+
+    } finally {
+      button.disabled = false;
+      button.textContent = '확인';
+    }
   });
+
+
+
   document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.closeDialog).close()));
   new ResizeObserver(() => {
     clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (active) focusMap(); }, 150);
@@ -407,7 +548,17 @@ export function initRestaurantApp() {
       cleanupImages?.(); cleanupImages = undefined;
       cancelVideos();
       active = false; revision++; clearTimeout(toastTimer); $('#explore-toast').hidden = true;
-      ['bookmark-name-dialog', 'save-bookmark-dialog', 'password-confirm-dialog'].forEach(id => { if (document.getElementById(id).open) document.getElementById(id).close(); });
+      [
+        'save-bookmark-dialog',
+        'password-confirm-dialog',
+        'profile-edit-dialog',
+        'video-dialog'
+      ].forEach(id => {
+        if (document.getElementById(id).open) {
+          document.getElementById(id).close();
+        }
+      });
+    
     },
     // 브라우저 확인용 읽기 전용 상태입니다. 계정 비밀번호와 해시는 노출하지 않습니다.
     get status() { return { route, mapStatus, count: visibleRestaurants.length, selectedId: view.selectedId }; },

@@ -110,11 +110,239 @@ body.workspace-screen { padding: 0; overflow: hidden; background: var(--food-yel
 .bookmark-page-heading { display: flex; align-items: center; justify-content: space-between; gap: 25px; margin-bottom: 35px; }
 .bookmark-page-heading h1 { font-size: 32px; line-height: 1.6; font-weight: 700; color: var(--food-deep); margin: 10px 0 12px; }
 .bookmark-page-heading p { font-size: 12px; color: #a57336; margin: 0; }
+
+/* 마이페이지 사용자 정보 카드 */
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+
+  padding: 24px 27px;
+  margin-bottom: 35px;
+
+  border: 3px solid var(--food-deep);
+  background: var(--food-paper);
+  box-shadow: 5px 5px 0 #d68c3399;
+}
+
+
+/* 사용자 아바타 */
+.profile-avatar {
+  width: 76px;
+  height: 76px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border: 3px solid var(--food-deep);
+  background: var(--food-yellow);
+
+  font-size: 36px;
+
+  box-shadow: inset -5px -5px 0 #e8b844;
+}
+
+
+/* 사용자 정보 영역 */
+.profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+
+/* 이름 + 아이디 */
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  margin-bottom: 9px;
+}
+
+.profile-name-row h2 {
+  margin: 0;
+
+  font-size: 22px;
+  font-weight: 700;
+
+  color: var(--food-deep);
+}
+
+
+/* @아이디 */
+.profile-id {
+  padding: 4px 7px;
+
+  border: 1px solid #d1a35f;
+  background: #ffedb1;
+
+  color: #9b6b35;
+
+  font-size: 10px;
+}
+
+
+/* 이메일 */
+#my-profile-email {
+  margin: 0 0 8px;
+
+  font-size: 12px;
+  color: #966d3e;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* 가입일 */
+.profile-created {
+  margin: 0;
+
+  font-size: 10px;
+  color: #b18b55;
+}
+
+
+/* 개인 정보 수정 버튼 */
+.profile-edit-button {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+/* 마이페이지 활동 요약 */
+.my-summary {
+  display: flex;
+  align-items: stretch;
+
+  margin-bottom: 35px;
+
+  border: 2px solid #d1a35f;
+  background: #ffedb1;
+}
+
+
+/* 각각의 요약 항목 */
+.summary-item {
+  flex: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 18px 24px;
+}
+
+
+/* 북마크 / 저장한 맛집 글자 */
+.summary-label {
+  font-size: 11px;
+  color: #9d743e;
+}
+
+
+/* 숫자 */
+.summary-item strong {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+
+  font-size: 25px;
+  color: var(--food-deep);
+}
+
+
+/* 개 / 곳 */
+.summary-item small {
+  font-size: 10px;
+  font-weight: 400;
+  color: #a8814c;
+}
+
+
+/* 가운데 구분선 */
+.summary-divider {
+  width: 2px;
+  margin: 12px 0;
+
+  background: #d6ad68;
+}
 .bookmark-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 21px; }
 .bookmark-toolbar h2 { font-size: 17px; font-weight: 700; margin: 0; }
 .bookmark-toolbar h2 span { color: #b08950; font-size: 13px; }
 .bookmark-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 19px; }
-.bookmark-card { position: relative; text-align: left; min-height: 137px; padding: 23px 28px; background: var(--food-paper); color: var(--food-ink); border: 3px solid var(--food-deep); box-shadow: 4px 4px 0 #d68c3399; display: flex; align-items: center; gap: 23px; }
+.bookmark-card {
+  position: relative;
+
+  min-height: 137px;
+
+  background: var(--food-paper);
+  color: var(--food-ink);
+
+  border: 3px solid var(--food-deep);
+  box-shadow: 4px 4px 0 #d68c3399;
+
+  transition: transform .12s, background .12s;
+}
+.bookmark-card-content {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  gap: 23px;
+
+  padding: 23px 28px;
+
+  border: 0;
+  background: transparent;
+
+  color: inherit;
+  text-align: left;
+}
+
+.bookmark-card-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.bookmark-card-content .bookmark-arrow {
+  margin-left: auto;
+
+  font-size: 22px;
+  color: #ba8242;
+}
+.bookmark-card-actions {
+  display: flex;
+  justify-content: flex-end;
+
+  padding: 0 20px 17px;
+}
+
+.bookmark-share-button {
+  padding: 8px 13px;
+
+  border: 2px solid #bd8540;
+  background: #fff2bd;
+
+  color: #925d2e;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  box-shadow: 2px 2px 0 #bd8540;
+}
+
+.bookmark-share-button:hover {
+  background: #ffe694;
+
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #bd8540;
+}
+
+.bookmark-share-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
 .bookmark-card:hover { transform: translateY(-2px); background: #fff3c0; }
 .pixel-folder { display: inline-block; width: 40px; height: 31px; border: 3px solid #be772a; background: #ffd76f; position: relative; flex-shrink: 0; box-shadow: inset -4px -4px 0 #f0b44f; }
 .pixel-folder::before { content: ''; position: absolute; left: -3px; top: -11px; width: 21px; height: 11px; border: 3px solid #be772a; border-bottom: 0; background: #ffd76f; }
@@ -170,6 +398,20 @@ body.workspace-screen { padding: 0; overflow: hidden; background: var(--food-yel
   .explore-page[data-view=results].insights-open .explore-map-stage { left: 701px; }
 }
 @media (max-width: 760px) {
+  .my-summary {
+    margin-bottom: 28px;
+  }
+
+  .summary-item {
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 7px;
+  }
+
+  .summary-item strong {
+    font-size: 21px;
+  }
   .explore-header { height: 67px; padding: 0 16px; gap: 9px; }
   .explore-brand { font-size: 22px; letter-spacing: 0; }
   .source-badge { padding: 3px 5px; font-size: 8px; }
