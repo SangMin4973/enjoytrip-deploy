@@ -1,0 +1,57 @@
+import { createServer } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import path from 'node:path';
+import { tourRoute } from './server/tour.js';
+
+const root = path.dirname(fileURLToPath(import.meta.url));
+if (existsSync(path.join(root, '.env'))) process.loadEnvFile(path.join(root, '.env'));
+const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png' };
+
+function json(response, status, value) {
+  response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  response.end(JSON.stringify(value));
+}
+
+// 실행과 API 키 중계만 담당합니다. 회원 인증/DB 서버는 구현하지 않습니다.
+export function makeServer() {
+  return createServer(async (request, response) => {
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    if (!['GET', 'HEAD'].includes(request.method)) { json(response, 405, { error: '지원하지 않는 요청입니다.' }); return; }
+    try {
+      const url = new URL(request.url, 'http://localhost');
+      if (url.pathname === '/api/config') {
+        json(response, 200, { tourApiConfigured: !!process.env.TOUR_API_SERVICE_KEY, kakaoMapJsKey: process.env.KAKAO_MAP_JS_KEY || '' });
+        return;
+      }
+      if (url.pathname.startsWith('/api/tour/')) {
+        const result = await tourRoute(url.pathname, url.searchParams);
+        json(response, result === null ? 404 : 200, result ?? { error: '없는 API입니다.' });
+        return;
+      }
+      const pathname = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname);
+      // 환경변수, .git, 서버 소스 등은 정적 파일로 노출하지 않습니다.
+      if (!/^\/(index\.html|css\/[\w-]+\.css|js\/[\w-]+\.js|resources\/[\w.-]+\.png)$/.test(pathname)) {
+        json(response, 404, { error: '파일을 찾을 수 없습니다.' }); return;
+      }
+      const file = path.resolve(root, '.' + pathname);
+      if (!file.startsWith(root + path.sep)) { json(response, 403, { error: '접근할 수 없습니다.' }); return; }
+      const data = await readFile(file);
+      response.writeHead(200, { 'Content-Type': `${types[path.extname(file)] || 'application/octet-stream'}; charset=utf-8`, 'Cache-Control': 'no-cache' });
+      response.end(request.method === 'HEAD' ? undefined : data);
+    } catch (error) {
+      json(response, error.code === 'ENOENT' ? 404 : 400, { error: error.code === 'ENOENT' ? '파일을 찾을 수 없습니다.' : error.message });
+    }
+  });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  const port = Number(process.env.PORT || 5173);
+  const server = makeServer();
+  server.on('error', (error) => {
+    console.error(error.code === 'EADDRINUSE' ? `${port} 포트가 사용 중입니다. .env의 PORT 값을 바꿔 주세요.` : error.message);
+    process.exitCode = 1;
+  });
+  server.listen(port, '127.0.0.1', () => console.log(`EnjoyTrip: http://localhost:${port}`));
+}

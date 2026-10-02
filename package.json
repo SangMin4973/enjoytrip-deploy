@@ -1,0 +1,13 @@
+{
+  "name": "enjoytrip-frontend-base",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "EnjoyTrip 명세서 필수 기능용 HTML/CSS/JavaScript 기본 코드",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs",
+    "test": "node --test"
+  }
+}
