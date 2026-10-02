@@ -2,14 +2,24 @@ import { CONTENT_TYPES } from './data.js';
 import * as api from './api.js';
 import * as auth from './auth.js';
 import { initMap, updateMap } from './map.js';
+import { initLoginScene } from './login-scene.js';
+import { LOGIN_MAP_CONFIG } from './map-config.js';
 
 const $ = (selector) => document.querySelector(selector);
 const typeName = (code) => CONTENT_TYPES.find((type) => type.code === code)?.name || '기타';
 const state = { mode: 'sample', page: 1, size: 10, total: 0, items: [], filters: null, revision: 0, detailRevision: 0 };
+const loginScene = initLoginScene();
+let configReady = false;
+let tourInitialized = false;
+let mapKey = LOGIN_MAP_CONFIG.appKey;
 
 function notify(message, error = false) {
   $('#message').textContent = message;
   $('#message').dataset.error = String(error);
+  const feedback = $('#login-feedback');
+  feedback.textContent = message;
+  feedback.dataset.error = String(error);
+  feedback.hidden = !message;
 }
 
 function options(select, items, firstLabel) {
@@ -30,16 +40,35 @@ function refreshSession() {
 
 function showPage() {
   const known = ['tour', 'join', 'login', 'profile', 'reset'];
-  let page = location.hash.slice(1) || 'tour';
-  if (!known.includes(page)) page = 'tour';
-  if (page === 'profile' && !auth.currentUser()) {
-    notify('내 정보를 확인하려면 로그인해 주세요.');
-    location.hash = 'login';
-    return;
+  const user = auth.currentUser();
+  const defaultPage = user ? 'tour' : 'login';
+  let page = location.hash.slice(1) || defaultPage;
+  if (!known.includes(page)) page = defaultPage;
+  if (['tour', 'profile'].includes(page) && !user) {
+    page = 'login';
+    history.replaceState(null, '', '#login');
+    notify('로그인 후 맛있는 여행을 시작해 주세요.');
   }
-  document.querySelectorAll('[data-page]').forEach((element) => { element.hidden = element.id !== page; });
+  document.querySelectorAll('section[data-page]').forEach((element) => { element.hidden = element.id !== page; });
+  const isLogin = page === 'login';
+  $('#app-header').hidden = isLogin;
+  $('#app-main').hidden = isLogin;
+  document.body.classList.toggle('auth-screen', isLogin);
+  document.body.dataset.page = page;
+  loginScene.setActive(isLogin);
   refreshSession();
-  if (page === 'tour') updateMap(state.items);
+  if (page === 'tour') {
+    if (configReady) initializeTour();
+    updateMap(state.items);
+  }
+}
+
+async function initializeTour() {
+  if (tourInitialized) return;
+  tourInitialized = true;
+  await loadAreas();
+  await initMap(mapKey);
+  if (document.body.dataset.page === 'tour') updateMap(state.items);
 }
 
 function clearResults() {
@@ -166,11 +195,13 @@ function bindForm(id, action) {
     const form = event.currentTarget;
     const values = Object.fromEntries(new FormData(form));
     const button = form.querySelector('[type="submit"]'); button.disabled = true;
+    const label = button.textContent;
+    if (form.getAttribute('id') === 'login-form') { button.textContent = '로그인 중'; notify(''); }
     try {
       if ('confirm' in values && values.password !== values.confirm) throw new Error('비밀번호 확인이 일치하지 않습니다.');
       await action(values, form); refreshSession();
     } catch (error) { notify(error.message, true); }
-    finally { button.disabled = false; }
+    finally { button.disabled = false; button.textContent = label; }
   });
 }
 
@@ -182,19 +213,33 @@ $('#next-page').addEventListener('click', () => search(state.page + 1));
 $('#detail-dialog').addEventListener('close', () => { state.detailRevision += 1; });
 
 bindForm('#join-form', async (values, form) => {
-  await auth.register(values); form.reset(); location.hash = 'login'; notify('가입했습니다. 새 계정으로 로그인해 주세요.');
+  const user = await auth.register(values);
+  form.reset(); $('#email').value = user.email; location.hash = 'login'; notify('가입했습니다. 새 계정으로 로그인해 주세요.');
 });
 bindForm('#login-form', async (values, form) => {
-  await auth.login(values.id, values.password); form.reset(); location.hash = 'profile'; notify('로그인했습니다.');
+  await auth.login(values.id, values.password, { remember: form.elements.remember.checked });
+  form.reset(); $('#password').type = 'password';
+  $('#toggle-password').setAttribute('aria-pressed', 'false');
+  $('#toggle-password').setAttribute('aria-label', '비밀번호 보기');
+  location.hash = 'tour'; notify('로그인했습니다.');
 });
 bindForm('#profile-form', async (values) => { await auth.updateProfile(values); notify('회원정보를 수정했습니다.'); });
 bindForm('#reset-form', async (values, form) => {
   await auth.resetPassword(values); form.reset(); location.hash = 'login'; notify('비밀번호를 재설정했습니다. 새 비밀번호로 로그인해 주세요.');
 });
-$('#logout').addEventListener('click', () => { auth.logout(); refreshSession(); location.hash = 'tour'; notify('로그아웃했습니다.'); });
+$('#toggle-password').addEventListener('click', (event) => {
+  const input = $('#password');
+  const visible = input.type === 'password'; input.type = visible ? 'text' : 'password';
+  event.currentTarget.setAttribute('aria-pressed', String(visible));
+  event.currentTarget.setAttribute('aria-label', visible ? '비밀번호 숨기기' : '비밀번호 보기');
+});
+$('#logout').addEventListener('click', () => {
+  try { auth.logout(); refreshSession(); location.hash = 'login'; notify('로그아웃했습니다.'); }
+  catch (error) { notify(error.message, true); }
+});
 $('#delete-account').addEventListener('click', () => {
   if (!confirm('이 브라우저에 저장된 회원정보를 삭제하고 탈퇴할까요?')) return;
-  try { auth.deleteAccount(); refreshSession(); location.hash = 'tour'; notify('회원 탈퇴가 완료되었습니다.'); }
+  try { auth.deleteAccount(); refreshSession(); location.hash = 'login'; notify('회원 탈퇴가 완료되었습니다.'); }
   catch (error) { notify(error.message, true); }
 });
 window.addEventListener('hashchange', () => { try { showPage(); } catch (error) { notify(error.message, true); } });
@@ -203,14 +248,15 @@ window.addEventListener('storage', () => { try { showPage(); } catch (error) { n
 async function init() {
   options($('#content-type'), CONTENT_TYPES, '전체');
   try { showPage(); } catch (error) { notify(error.message, true); }
-  await loadAreas();
   try {
     const config = await api.getConfig();
-    await initMap(config.kakaoMapJsKey);
-    updateMap(state.items);
-  } catch {
-    $('#map-message').textContent = '지도 설정을 읽지 못했습니다. npm start로 실행하면 실제 API와 지도를 연결할 수 있습니다.';
-  }
+    state.mode = config.tourApiConfigured ? 'live' : 'sample';
+    $('#data-mode').value = state.mode;
+    mapKey = config.kakaoMapJsKey || LOGIN_MAP_CONFIG.appKey;
+  } catch (error) { notify(error.message, true); }
+  configReady = true;
+  loginScene.configureMap(mapKey);
+  if (document.body.dataset.page === 'tour') await initializeTour();
 }
 
 init();

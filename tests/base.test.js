@@ -58,13 +58,36 @@ test('입력 오류와 손상된 회원 데이터를 저장 완료로 처리하�
   stored.clear();
 });
 
+test('이메일 로그인, 로그인 유지 기간, 만료와 기존 세션 호환', async () => {
+  stored.clear();
+  await auth.register({ id: 'foodlover', name: '맛집여행자', email: 'food@example.com', password: 'foodpass123' });
+  await auth.login(' FOOD@EXAMPLE.COM ', 'foodpass123', { remember: false });
+  assert.equal(auth.currentUser().id, 'foodlover');
+  const shortExpiry = JSON.parse(stored.get('enjoytrip.base.sessionExpiresAt'));
+  assert.ok(shortExpiry > Date.now() + 11 * 60 * 60 * 1000);
+  assert.ok(shortExpiry <= Date.now() + 12 * 60 * 60 * 1000);
+  await auth.login('foodlover', 'foodpass123', { remember: true });
+  const longExpiry = JSON.parse(stored.get('enjoytrip.base.sessionExpiresAt'));
+  assert.ok(longExpiry > Date.now() + 29 * 24 * 60 * 60 * 1000);
+  await assert.rejects(auth.login('food@example.com', 'wrongpass123'), /올바르지/);
+  assert.equal(JSON.parse(stored.get('enjoytrip.base.sessionExpiresAt')), longExpiry);
+  stored.set('enjoytrip.base.sessionExpiresAt', JSON.stringify(Date.now() - 1));
+  assert.equal(auth.currentUser(), null);
+  assert.equal(stored.has('enjoytrip.base.session'), false);
+  assert.equal(stored.has('enjoytrip.base.sessionExpiresAt'), false);
+  stored.set('enjoytrip.base.session', JSON.stringify('foodlover'));
+  assert.equal(auth.currentUser().id, 'foodlover');
+  auth.logout();
+  assert.equal(auth.currentUser(), null);
+});
+
 test('관광 API 단일 항목 정규화, 키 인코딩과 제공자 오류 처리', async () => {
   let requested;
   const response = await fetchTour('areaBasedList2', { lDongRegnCd: '11' }, {
     key: 'example%2Bkey%3D',
     fetchImpl: async (url) => {
       requested = new URL(url);
-      return { ok: true, json: async () => ({ response: { header: { resultCode: '0000' }, body: { totalCount: 1, items: { item: { contentid: '123', title: '관광지' } } } } }) };
+      return { status: 200, text: async () => JSON.stringify({ response: { header: { resultCode: '0000' }, body: { totalCount: 1, items: { item: { contentid: '123', title: '관광지' } } } } }) };
     },
   });
   assert.equal(requested.searchParams.get('serviceKey'), 'example+key=');
@@ -75,7 +98,7 @@ test('관광 API 단일 항목 정규화, 키 인코딩과 제공자 오류 처�
     phone: '', overview: '설명\n다음', source: '한국관광공사 TourAPI',
   });
   await assert.rejects(fetchTour('areaBasedList2', {}, { key: '' }), /SERVICE_KEY/);
-  await assert.rejects(fetchTour('areaBasedList2', {}, { key: 'example', fetchImpl: async () => ({ ok: true, json: async () => ({ response: { header: { resultCode: '30' } } }) }) }), /실패/);
+  await assert.rejects(fetchTour('areaBasedList2', {}, { key: 'example', fetchImpl: async () => ({ status: 200, text: async () => JSON.stringify({ response: { header: { resultCode: '30' } } }) }) }), /등록되지 않은 서비스키/);
 });
 
 test('로컬 서버가 화면을 제공하고 환경설정·서버 소스를 노출하지 않는다', async (context) => {
@@ -85,6 +108,11 @@ test('로컬 서버가 화면을 제공하고 환경설정·서버 소스를 노
   const base = `http://127.0.0.1:${server.address().port}`;
   assert.equal((await fetch(base)).status, 200);
   assert.equal((await fetch(`${base}/js/main.js`)).status, 200);
+  assert.equal((await fetch(`${base}/css/login.css`)).status, 200);
+  assert.equal((await fetch(`${base}/resources/food-login/food-reference.png`)).status, 200);
+  const font = await fetch(`${base}/resources/food-login/fonts/Galmuri11.woff2`);
+  assert.equal(font.status, 200);
+  assert.match(font.headers.get('content-type'), /font\/woff2/);
   assert.equal((await fetch(`${base}/.env`)).status, 404);
   assert.equal((await fetch(`${base}/server.mjs`)).status, 404);
   assert.equal((await fetch(`${base}/.git/config`)).status, 404);

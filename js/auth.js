@@ -36,6 +36,11 @@ function publicUser(user) {
 }
 
 export function currentUser() {
+  const expiresAt = readStorage('sessionExpiresAt', null);
+  if (typeof expiresAt === 'number' && expiresAt <= Date.now()) {
+    logout();
+    return null;
+  }
   return publicUser(users().find((user) => user.id === readStorage('session', null)));
 }
 
@@ -52,16 +57,22 @@ export async function register({ id, name, email, password }) {
   return publicUser(user);
 }
 
-export async function login(id, password) {
-  const user = users().find((entry) => entry.id === id.trim());
+export async function login(identifier, password, { remember = true } = {}) {
+  const value = identifier.trim();
+  const user = users().find((entry) => entry.id === value || entry.email.toLowerCase() === value.toLowerCase());
   if (!user || (await passwordRecord(password, user.salt)).passwordHash !== user.passwordHash) {
-    throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');
+    throw new Error('이메일·아이디 또는 비밀번호가 올바르지 않습니다.');
   }
+  const duration = (remember ? 30 * 24 : 12) * 60 * 60 * 1000;
+  writeStorage('sessionExpiresAt', Date.now() + duration);
   writeStorage('session', user.id);
   return publicUser(user);
 }
 
-export function logout() { removeStorage('session'); }
+export function logout() {
+  removeStorage('session');
+  removeStorage('sessionExpiresAt');
+}
 
 export async function updateProfile({ name, email, password }) {
   const user = currentUser();

@@ -1,3 +1,5 @@
+import { loadKakaoSdk } from './kakao-sdk.js';
+
 let map;
 let markers = [];
 
@@ -8,23 +10,13 @@ export async function initMap(key) {
     return;
   }
   try {
-    await new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      const timeout = setTimeout(() => reject(new Error('시간 초과')), 10000);
-      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(key)}&autoload=false`;
-      script.onload = () => {
-        if (!window.kakao?.maps) { clearTimeout(timeout); reject(new Error('SDK 오류')); return; }
-        window.kakao.maps.load(() => { clearTimeout(timeout); resolve(); });
-      };
-      script.onerror = () => { clearTimeout(timeout); reject(new Error('SDK 오류')); };
-      document.head.append(script);
-    });
+    await loadKakaoSdk(key);
     const container = document.querySelector('#map');
     container.hidden = false;
     map = new window.kakao.maps.Map(container, { center: new window.kakao.maps.LatLng(37.5665, 126.978), level: 7 });
     message.textContent = '조회 결과의 좌표를 표시합니다. 샘플 모드의 위치는 가상 좌표입니다.';
   } catch {
-    message.textContent = '지도를 불러오지 못했습니다. 카카오 키와 등록 도메인을 확인해 주세요. 목록 조회는 계속 사용할 수 있습니다.';
+    message.textContent = `지도를 불러오지 못했습니다. 카카오 앱의 JavaScript 키와 JavaScript SDK 도메인에 ${location.origin}이 등록되어 있는지 확인해 주세요. 목록 조회는 계속 사용할 수 있습니다.`;
   }
 }
 
