@@ -5,7 +5,6 @@ import { loadKakaoSdk } from './kakao-sdk.js';
 import { LOGIN_MAP_CONFIG } from './map-config.js';
 import { searchYoutubeVideos } from './youtube-api.js';
 import { buildRestaurantSearchQuery } from './restaurant-search.js';
-import { populateRestaurantImages } from './restaurant-images.js';
 
 const $ = selector => document.querySelector(selector);
 
@@ -25,7 +24,6 @@ export function initRestaurantApp() {
   let route = 'home', active = false, mapKey = LOGIN_MAP_CONFIG.appKey;
   let revision = 0, toastTimer, resizeTimer, bookmarkRestaurantId, confirmTarget = 'bookmarks';
   let videoRevision = 0, videoController, shownVideos = [];
-  let imagesConfigured = false, cleanupImages;
 
   function toast(message) {
     const box = $('#explore-toast'); box.textContent = message; box.hidden = !message;
@@ -51,11 +49,10 @@ export function initRestaurantApp() {
     const button = element('button', 'restaurant-card-content'); button.type = 'button';
     button.dataset.action = 'select'; button.dataset.id = restaurant.id;
     button.setAttribute('aria-label', `${restaurant.name} 인사이트 보기`);
-    const image = element('div', 'restaurant-photo photo-unavailable', '사진\n제공 없음');
     const text = element('div', 'restaurant-card-text');
     text.append(element('h3', '', restaurant.name), element('p', '', restaurant.phone || '전화번호 미등록'), element('p', '', restaurant.address || '주소 미등록'));
     text.append(element('p', 'restaurant-rating', '별점 제공 없음 · 카카오맵에서 확인'));
-    button.append(image, text);
+    button.append(text);
     const saved = savedIds().has(restaurant.id);
     const star = element('button', `save-restaurant${saved ? ' saved' : ''}`, saved ? '★' : '☆');
     star.type = 'button'; star.dataset.action = 'save'; star.dataset.id = restaurant.id;
@@ -65,7 +62,6 @@ export function initRestaurantApp() {
   }
 
   function renderList() {
-    cleanupImages?.(); cleanupImages = undefined;
     const list = $('#restaurant-list'), scrollTop = list.scrollTop;
     list.replaceChildren();
     let missing = 0;
@@ -81,7 +77,7 @@ export function initRestaurantApp() {
       visibleRestaurants = searching || searchError ? [] : (searchResult?.restaurants || []);
     }
     $('#results-count').textContent = searching ? '카카오맵에서 음식점을 찾는 중…' : searchError ? '검색 연결 오류' : `음식점 ${visibleRestaurants.length}곳 · ${view.source === 'bookmark' ? '저장한 카카오 장소 정보' : '카카오맵 검색 결과'}`;
-    $('#results-notice').textContent = missing ? `이전 예시 또는 정보가 없는 음식점 ${missing}곳은 표시하지 않습니다. 기존 북마크는 보존됩니다.` : view.source === 'bookmark' ? '저장 당시 정보입니다. 최신 정보는 카카오맵에서 확인해 주세요.' : '카카오 검색 정확도 순입니다. 사진·별점은 API에서 제공하지 않습니다.';
+    $('#results-notice').textContent = missing ? `이전 예시 또는 정보가 없는 음식점 ${missing}곳은 표시하지 않습니다. 기존 북마크는 보존됩니다.` : view.source === 'bookmark' ? '저장 당시 정보입니다. 최신 정보는 카카오맵에서 확인해 주세요.' : '카카오 검색 정확도 순입니다. 별점은 카카오맵에서 확인해 주세요.';
     $('#restaurant-list').setAttribute('aria-busy', String(searching));
     $('#search-pagination').hidden = view.source === 'bookmark' || searching || !!searchError || !searchResult?.restaurants.length;
     $('#search-page-label').textContent = `${view.page || 1}페이지 · 검색 ${searchResult?.total || 0}곳 (최대 45곳 조회)`;
@@ -94,7 +90,6 @@ export function initRestaurantApp() {
       const back = element('a', '', '다시 맛집 찾기'); back.href = '#home'; empty.append(back); list.append(empty);
     } else visibleRestaurants.forEach(restaurant => list.append(restaurantCard(restaurant)));
     list.scrollTop = scrollTop;
-    if (imagesConfigured && visibleRestaurants.length) cleanupImages = populateRestaurantImages(list, visibleRestaurants);
     if (!visibleRestaurants.some(item => item.id === view.selectedId)) view.selectedId = null;
   }
 
@@ -380,10 +375,8 @@ export function initRestaurantApp() {
 
   return {
     configureMap(key) { mapKey = key || LOGIN_MAP_CONFIG.appKey; },
-    configureImages(configured) { imagesConfigured = !!configured; },
     requestMyPage,
     async setRoute(next) {
-      cleanupImages?.(); cleanupImages = undefined;
       cancelVideos();
       active = true; route = next; const currentRevision = ++revision;
       root.dataset.view = next;
@@ -404,7 +397,6 @@ export function initRestaurantApp() {
       await ensureMap();
     },
     deactivate() {
-      cleanupImages?.(); cleanupImages = undefined;
       cancelVideos();
       active = false; revision++; clearTimeout(toastTimer); $('#explore-toast').hidden = true;
       ['bookmark-name-dialog', 'save-bookmark-dialog', 'password-confirm-dialog'].forEach(id => { if (document.getElementById(id).open) document.getElementById(id).close(); });

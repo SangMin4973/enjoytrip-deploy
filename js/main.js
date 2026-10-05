@@ -274,7 +274,6 @@ async function init() {
     state.mode = config.tourApiConfigured ? 'live' : 'sample';
     $('#data-mode').value = state.mode;
     mapKey = config.kakaoMapJsKey || LOGIN_MAP_CONFIG.appKey;
-    restaurantApp.configureImages(config.restaurantImagesConfigured);
   } catch (error) { notify(error.message, true); }
   configReady = true;
   loginScene.configureMap(mapKey);

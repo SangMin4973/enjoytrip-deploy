@@ -45,7 +45,7 @@ export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions
       }
       const pathname = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname);
       // 환경변수, .git, 서버 소스 등은 정적 파일로 노출하지 않습니다.
-      if (!/^\/(index\.html|css\/[\w-]+\.css|js\/[\w-]+\.js|resources\/[\w.-]+\.png|resources\/food-login\/(food-reference\.png|pixel-town-map\.png|fonts\/(Galmuri11(?:-Bold)?\.woff2|OFL\.md)))$/.test(pathname)) {
+      if (!/^\/(index\.html|board\/(list|view|write|modify)\.html|css\/[\w-]+\.css|js\/[\w-]+\.js|resources\/[\w.-]+\.png|resources\/food-login\/(food-reference\.png|pixel-town-map\.png|fonts\/(Galmuri11(?:-Bold)?\.woff2|OFL\.md)))$/.test(pathname)) {
         json(response, 404, { error: '파일을 찾을 수 없습니다.' }); return;
       }
       const file = path.resolve(root, '.' + pathname);
