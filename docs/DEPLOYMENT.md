@@ -2,6 +2,8 @@
 
 이 단계에서는 HTML/CSS/JavaScript 화면과 Node.js API 중계 서버를 하나의 HTTPS 웹 서비스로 배포합니다. 회원·북마크·게시글은 여전히 각 브라우저의 localStorage에 저장됩니다. 서버 인증이나 기기 간 동기화는 다음 개발 단계입니다.
 
+2026-10-06 첫 배포를 완료했습니다. 공개 주소는 [맛집기행](https://matzip-journey.onrender.com), 배포용 저장소는 [enjoytrip-deploy](https://github.com/SangMin4973/enjoytrip-deploy)입니다. 아래 설정으로 운영 중이며 확인 결과는 `docs/TEST_PLAN.md`에 기록했습니다. 코드를 갱신할 때는 `git push deploy main`으로 배포 저장소에 반영합니다.
+
 ## 1. 배포할 저장소 준비
 
 현재 원격 저장소는 SSAFY GitLab(`lab.ssafy.com`)입니다. Render에서 연결할 수 있는 GitHub·GitLab.com·Bitbucket 저장소를 준비하는 경로를 권장합니다. 접근 권한이 있는 비공개 GitHub 저장소도 연결할 수 있습니다.
