@@ -59,7 +59,7 @@ npm test
 - 로그인 추천 DOM·이벤트·스타일 제거 확인. 음식 배경과 실습 계정 로그인 동작 확인.
 - `git diff --check` 통과. 실제 네트워크 장애 강제·모든 키보드 조합·실사용 계정 이전은 수동 항목으로 유지합니다. 연결 실패·시간 초과·기존 더미 보존·회원별 저장 분리는 독립 자동 검사로 확인했습니다.
 
-현재 실제 연결 캡처: [음식점·인사이트·지도](screenshots/kakao-live-results.jpg), [북마크 재조회](screenshots/kakao-live-bookmark.jpg), [모바일 인사이트](screenshots/kakao-live-mobile.jpg).
+화면 자료: [음식점·인사이트·지도](screenshots/screen-insights.png).
 
 ## 유튜브 실제 연결 추가 결과 — 2026-10-02
 
@@ -73,7 +73,7 @@ npm test
 - 서버에서만 키를 사용합니다. 자동 검사로 환경설정 응답·정적 서버 파일에 키가 노출되지 않음, 실패 후 재시도, 캐시 재사용·만료를 확인했습니다.
 - 검색 결과가 해당 지점 방문 영상임을 보장하지 않습니다. 화면에 이를 안내합니다. 모든 영상의 전체 재생·향후 제공자 제한 변경은 확인 범위에 포함되지 않습니다.
 
-실제 연결 캡처: [영상 목록](screenshots/youtube-live-results.jpg), [영상창](screenshots/youtube-live-player.jpg), [모바일](screenshots/youtube-live-mobile.jpg).
+화면 자료: [영상 재생창](screenshots/screen-video-player.png).
 
 ## 이미지 검색 추가 — 이전 구현 기록
 
@@ -85,4 +85,4 @@ npm test
 
 ## 이전 구현 기록
 
-예시 데이터 구현에서 자동 검사 19개와 PC·모바일 주요 흐름을 확인한 기록이 있었습니다. 이는 이번 실제 검색의 검증 결과가 아닙니다. `docs/screenshots/`의 기존 캡처에는 예시 데이터·음식 클릭 추천이 포함되어 현재 화면을 대표하지 않습니다.
+예시 데이터 구현에서 자동 검사 19개와 PC·모바일 주요 흐름을 확인한 기록이 있었습니다. 이는 이번 실제 검색의 검증 결과가 아닙니다. 화면 자료는 `docs/screenshots/`에 있는 현재 UI 이미지를 참조합니다.
