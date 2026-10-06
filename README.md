@@ -413,6 +413,8 @@ npm run dev -- --port=5179
 ```
 
 포트를 생략하면 `.env`의 `PORT`를 사용하고, 설정이 없으면 `5173`으로 실행한다. 환경변수를 수정한 뒤에는 서버를 다시 시작한다.
+
+공개 웹 배포는 [Render 배포 가이드](docs/DEPLOYMENT.md)를 따른다. 저장소 루트의 `render.yaml`에는 Node.js 버전, 외부 접속 주소, 테스트 후 실행, `/healthz` 상태 확인 설정이 포함되어 있다.
 ---
 
 ## 🧩 핵심 모듈
@@ -468,6 +470,7 @@ npm test
 | --- | --- |
 | `base.test.js` | 회원 흐름, 세션, 관광 샘플 필터, 서버 정적 제공 |
 | `board.test.js` | 기존 게시글 보존, 작성·조회·수정·삭제, 입력·저장소 오류, 게시판 정적 제공 |
+| `deployment.test.js` | 실제 서버 실행의 HOST·PORT 적용, 상태 확인, 화면 제공·비밀 파일 차단 |
 | `restaurant-flow.test.js` | 음식점 검색·페이지 처리, 장소 저장, 북마크 분리, 비밀번호 재확인 |
 | `tour-api.test.js` | 관광 API 요청 파라미터와 인증·네트워크 오류 |
 | `youtube-api.test.js` | 영상 검색, 응답 정규화, 요청 공유, 캐시, 키 비노출 |

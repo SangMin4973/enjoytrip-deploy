@@ -25,6 +25,11 @@ export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions
     if (!['GET', 'HEAD'].includes(request.method)) { json(response, 405, { error: '지원하지 않는 요청입니다.' }); return; }
     try {
       const url = new URL(request.url, 'http://localhost');
+      // 배포 상태 확인은 외부 API 호출이나 비밀 설정 없이 응답합니다.
+      if (url.pathname === '/healthz') {
+        json(response, 200, { status: 'ok' });
+        return;
+      }
       if (url.pathname === '/api/config') {
         json(response, 200, { tourApiConfigured: !!process.env.TOUR_API_SERVICE_KEY?.trim(), kakaoMapJsKey: process.env.KAKAO_MAP_JS_KEY || '',
           restaurantImagesConfigured: !!(process.env.GOOGLE_CUSTOM_SEARCH_API_KEY?.trim() && process.env.GOOGLE_CUSTOM_SEARCH_CX?.trim()) });
@@ -65,10 +70,15 @@ export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const portArgument = process.argv.find((argument) => argument.startsWith('--port='));
   const port = Number(portArgument?.slice('--port='.length) || process.env.PORT || 5173);
+  const host = process.env.HOST?.trim() || '127.0.0.1';
   const server = makeServer();
   server.on('error', (error) => {
     console.error(error.code === 'EADDRINUSE' ? `${port} 포트가 사용 중입니다. .env의 PORT 값을 바꿔 주세요.` : error.message);
     process.exitCode = 1;
   });
-  server.listen(port, '127.0.0.1', () => console.log(`EnjoyTrip: http://localhost:${port}`));
+  server.listen(port, host, () => {
+    const address = server.address();
+    const displayHost = address.address.includes(':') ? `[${address.address}]` : address.address;
+    console.log(`EnjoyTrip: http://${displayHost}:${address.port}`);
+  });
 }
