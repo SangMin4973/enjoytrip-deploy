@@ -6,7 +6,7 @@
 body { margin: 0; min-height: 100svh; background: var(--yellow); color: var(--ink); font-family: Galmuri11, 'Malgun Gothic', sans-serif; font-synthesis: none; }
 body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background-image: radial-gradient(#a42b2118 1px, transparent 1px); background-size: 12px 12px; }
 a { color: inherit; text-decoration: none; }
-button, input, textarea { font: inherit; }
+button, input, textarea, select { font: inherit; }
 button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 button:disabled { opacity: .45; cursor: default; }
@@ -175,3 +175,39 @@ input::placeholder, textarea::placeholder { color: #a8875f; opacity: 1; }
   .editor-actions { gap: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+.board-filters { display: flex; flex-wrap: wrap; gap: 10px; padding: 0 28px 20px; }
+.board-filters button { border: 1px solid var(--line); background: transparent; color: var(--muted); padding: 10px 15px; font-size: 12px; }
+.board-filters button[aria-pressed=true] { background: var(--deep); color: var(--paper); border-color: var(--deep); }
+.post-summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; font-size: 11px; line-height: 1.8; }
+.post-kind { display: inline-block; padding: 3px 7px; background: #ffeaa1; border: 1px solid var(--line); color: var(--deep); font-size: 10px; }
+.post-rating { color: var(--deep); }
+.post-context-editor { padding: 20px; margin: 0 0 25px; background: #fff0be; border: 1px solid var(--line); }
+.post-context-editor h2 { font-size: 15px; margin: 0 0 18px; }
+.editor-field select { display: block; width: 100%; min-height: 48px; border: 2px solid #c49858; background: #fffdf2; color: var(--ink); padding: 10px; font-size: 12px; }
+.context-hint { margin: 8px 0; font-size: 11px; line-height: 1.9; color: var(--muted); }
+.rating-picker { border: 0; padding: 0; margin: 18px 0; }
+.rating-picker legend { font-size: 13px; margin-bottom: 12px; }
+.rating-options { display: flex; flex-wrap: wrap; gap: 9px; }
+.rating-options label { display: flex; gap: 6px; align-items: center; border: 1px solid var(--line); background: var(--paper); padding: 10px; font-size: 12px; cursor: pointer; }
+.rating-options label:has(input:checked) { border-color: var(--deep); color: var(--deep); background: #ffe399; }
+.post-context-view { margin: 0 35px 28px; padding: 22px; background: #fff0be; border: 1px solid var(--line); }
+.post-context-view h3 { margin: 0 0 15px; font-size: 17px; line-height: 1.7; }
+.shared-restaurant { padding: 15px 0; border-bottom: 1px dashed var(--line); }
+.shared-restaurant:last-child { border-bottom: 0; }
+.shared-restaurant strong { display: block; font-size: 13px; line-height: 1.8; }
+.shared-restaurant p { font-size: 11px; line-height: 1.8; color: var(--muted); margin: 7px 0; }
+.shared-restaurant a, #comment-login a { text-decoration: underline; text-underline-offset: 4px; font-size: 11px; }
+.post-discussion { padding: 25px 35px; border-top: 1px dashed var(--line); }
+.post-discussion h2 { font-size: 18px; margin: 0 0 20px; }
+#comment-count { color: var(--red); }
+.comment-item { padding: 18px 0; border-bottom: 1px solid var(--line); }
+.comment-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 11px; color: var(--muted); }
+.comment-item p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 2; }
+.comment-delete { margin-left: auto; background: transparent; border: 0; color: var(--muted); text-decoration: underline; font-size: 11px; }
+#comment-form { margin-top: 25px; }
+#comment-form label { display: block; margin-bottom: 12px; font-size: 13px; }
+#comment-content { width: 100%; min-height: 110px; resize: vertical; padding: 13px; border: 2px solid #c49858; background: #fffdf2; color: var(--ink); line-height: 1.8; font-size: 12px; }
+.comment-submit { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-top: 12px; font-size: 11px; }
+#comment-feedback, #comment-login { font-size: 12px; line-height: 1.8; }
+@media (max-width: 760px) { .board-filters { padding: 0 18px 20px; } .post-context-view { margin: 0 24px 24px; } .post-discussion { padding: 24px; } }
+@media (max-width: 560px) { .post-context-editor { padding: 15px; } .rating-options { gap: 6px; } .rating-options label { padding: 9px; } .post-context-view { padding: 17px; } }

@@ -105,6 +105,7 @@ export function initRestaurantApp() {
     $('#naver-search').href = `https://search.naver.com/search.naver?query=${query}`;
     $('#youtube-search').href = `https://www.youtube.com/results?search_query=${query}`;
     $('#google-search').href = `https://www.google.com/search?q=${query}`;
+    $('#write-restaurant-review').href = `/board/write.html?${new URLSearchParams({ type: 'review', restaurant: restaurant.id })}`;
   }
 
   function renderInsights() {
@@ -269,33 +270,7 @@ export function initRestaurantApp() {
   });
 
   async function shareBookmark(bookmark) {
-    const restaurantList = bookmark.restaurantIds
-      .map(id => restaurants.find(restaurant => restaurant.id === id))
-      .filter(Boolean);
-
-    const restaurantNames = restaurantList.length
-      ? restaurantList.map(restaurant => `• ${restaurant.name}`).join('\n')
-      : '• 아직 저장한 맛집이 없습니다.';
-
-    const shareText =
-      `🍜 ${bookmark.name}\n\n` +
-      `${restaurantNames}\n\n` +
-      `맛집기행에서 만든 맛집 목록입니다.`;
-
-    // 모바일 등 Web Share API를 지원하는 경우
-    if (navigator.share) {
-      await navigator.share({
-        title: bookmark.name,
-        text: shareText
-      });
-
-      return;
-    }
-
-    // 공유 기능이 없는 브라우저에서는 클립보드 복사
-    await navigator.clipboard.writeText(shareText);
-
-    toast('북마크 내용을 클립보드에 복사했어요.');
+    location.href = `/board/write.html?${new URLSearchParams({ type: 'bookmark', bookmark: bookmark.id })}`;
   }
   function renderMyBookmarks() {
     const user = member(), bookmarks = store.loadBookmarks(user.id);
@@ -346,7 +321,7 @@ export function initRestaurantApp() {
 
       const actions = element('div', 'bookmark-card-actions');
 
-      const shareButton = element('button', 'bookmark-share-button', '공유하기');
+      const shareButton = element('button', 'bookmark-share-button', '게시판에 공유');
       shareButton.type = 'button';
       shareButton.dataset.action = 'share-bookmark';
       shareButton.dataset.bookmarkId = bookmark.id;

@@ -251,18 +251,19 @@ $('#toggle-password').addEventListener('click', (event) => {
   event.currentTarget.setAttribute('aria-pressed', String(visible));
   event.currentTarget.setAttribute('aria-label', visible ? '비밀번호 숨기기' : '비밀번호 보기');
 });
-function logoutMember() {
-  try { auth.logout(); refreshSession(); location.hash = 'login'; notify('로그아웃했습니다.'); }
+async function logoutMember() {
+  try { await auth.logout(); refreshSession(); location.hash = 'login'; notify('로그아웃했습니다.'); }
   catch (error) { notify(error.message, true); }
 }
 $('#logout').addEventListener('click', logoutMember);
 $('#workspace-logout').addEventListener('click', logoutMember);
-$('#delete-account').addEventListener('click', () => {
-  if (!confirm('이 브라우저에 저장된 회원정보를 삭제하고 탈퇴할까요?')) return;
+$('#delete-account').addEventListener('click', async () => {
+  if (!confirm('회원정보를 삭제하고 탈퇴할까요? 작성한 공개 게시글과 댓글은 남습니다.')) return;
   try {
     const user = auth.currentUser();
+    await auth.deleteAccount();
     if (user) removeUserBookmarks(user.id);
-    auth.deleteAccount(); refreshSession(); location.hash = 'login'; notify('회원 탈퇴가 완료되었습니다.');
+    refreshSession(); location.hash = 'login'; notify('회원 탈퇴가 완료되었습니다.');
   }
   catch (error) { notify(error.message, true); }
 });
@@ -273,6 +274,8 @@ async function init() {
   options($('#content-type'), CONTENT_TYPES, '전체');
   try {
     const config = await api.getConfig();
+    await auth.initializeSharedAuth(config.sharedBoardConfigured);
+    if (config.sharedBoardConfigured && !auth.currentUser()) notify('공유 게시판을 위한 서버 계정으로 로그인해 주세요. 기존 브라우저 계정은 회원가입에서 같은 아이디로 새로 등록할 수 있습니다.');
     state.mode = config.tourApiConfigured ? 'live' : 'sample';
     $('#data-mode').value = state.mode;
     mapKey = config.kakaoMapJsKey || LOGIN_MAP_CONFIG.appKey;

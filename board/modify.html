@@ -17,6 +17,7 @@
     <p id="board-feedback" class="board-feedback" role="status" aria-live="polite" hidden></p>
     <section class="board-window" aria-labelledby="editor-title"><div class="board-titlebar"><span id="editor-title">한 끼의 기록 수정</span><span aria-hidden="true">▪ ▪ ▪</span></div>
       <form id="modifyFrm" class="board-editor" hidden>
+        <div id="post-context-editor"></div>
         <div class="editor-row"><div class="editor-field title-field"><label for="post-subject">제목 <span>필수</span></label><input id="post-subject" name="subject" type="text" maxlength="120" required></div><div class="editor-field writer-field"><label for="post-writer">작성자 <span>필수</span></label><input id="post-writer" name="writer" type="text" maxlength="40" required autocomplete="nickname"></div></div>
         <div class="editor-field"><div class="content-label"><label for="post-content">이야기 <span>필수</span></label><span id="content-count">0 / 10,000</span></div><textarea id="post-content" name="content" maxlength="10000" required></textarea></div>
         <p class="editor-note">처음 등록한 날짜와 조회수는 그대로 유지됩니다.</p>

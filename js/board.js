@@ -1,113 +1,139 @@
-import { readPosts, findPost, createPost, updatePost, deletePost } from './board-store.js';
-import { currentUser } from './auth.js';
+import { currentUser, initializeSharedAuth } from './auth.js';
+import { sharedRequest } from './shared-client.js';
+import { initializeContextEditor, renderPostContext, postSummary, kindLabel, node } from './board-context.js';
 
 const $ = selector => document.querySelector(selector);
 const page = document.body.dataset.boardPage;
 const index = new URLSearchParams(location.search).get('index');
-const urlFor = (pageName, id) => `./${pageName}.html?${new URLSearchParams({ index: String(id) })}`;
-const number = value => Math.max(0, Number(value) || 0).toLocaleString('ko-KR');
-
+const urlFor = (name, id) => `./${name}.html?${new URLSearchParams({ index: String(id) })}`;
+const apiFor = id => `/api/board/posts/${encodeURIComponent(String(id))}`;
 function feedback(message, error = false) {
-  const box = $('#board-feedback');
-  box.textContent = message; box.dataset.error = String(error); box.hidden = !message;
+  const box = $('#board-feedback'); box.textContent = message; box.dataset.error = String(error); box.hidden = !message;
   box.setAttribute('role', error ? 'alert' : 'status');
 }
-
-function node(tag, className, text) {
-  const result = document.createElement(tag);
-  if (className) result.className = className;
-  if (text !== undefined) result.textContent = text;
-  return result;
+function requireMember() {
+  const user = currentUser();
+  if (!user) throw new Error('공유 계정으로 로그인한 뒤 글을 작성해 주세요. 맛집 찾기 화면에서 회원가입·로그인을 할 수 있습니다.');
+  return user;
 }
 
 function initializeList() {
-  let currentPage = 1, query = '';
-  const size = 8;
-  function render() {
+  let currentPage = 1, query = '', type = 'all', revision = 0;
+  async function render() {
+    const request = ++revision; $('#board-list').setAttribute('aria-busy', 'true');
     try {
-      const posts = readPosts().sort((a, b) => Number(b.index) - Number(a.index));
-      const matched = posts.filter(post => [post.subject, post.writer, post.content].some(value => value.toLocaleLowerCase('ko-KR').includes(query)));
-      const pages = Math.max(1, Math.ceil(matched.length / size));
-      currentPage = Math.min(currentPage, pages);
-      $('#post-total').textContent = number(posts.length);
-      $('#search-count').hidden = !query;
-      $('#search-count').textContent = `검색 결과 ${number(matched.length)}개`;
+      const result = await sharedRequest(`/api/board/posts?${new URLSearchParams({ page: currentPage, q: query, type })}`);
+      if (request !== revision) return;
+      const pages = Math.max(1, Math.ceil(result.matched / 8));
+      if (currentPage > pages) { currentPage = pages; return render(); }
+      $('#post-total').textContent = result.total.toLocaleString('ko-KR');
+      $('#search-count').hidden = !query && type === 'all'; $('#search-count').textContent = `검색 결과 ${result.matched}개`;
       $('#board-list').replaceChildren();
-      for (const post of matched.slice((currentPage - 1) * size, currentPage * size)) {
-        const row = node('tr');
-        const title = node('td'), link = node('a', 'post-link', post.subject);
+      for (const post of result.posts) {
+        const row = node('tr'), title = node('td'), link = node('a', 'post-link', post.subject);
         link.href = urlFor('view', post.index);
         const meta = node('span', 'post-mobile-meta');
-        for (const text of [post.writer, post.date || '날짜 미등록', `조회 ${number(post.views)}`]) meta.append(node('span', '', text));
-        title.append(link, meta);
-        row.append(node('td', 'post-number', String(Number(post.index) + 1)), title,
-          node('td', 'post-writer', post.writer), node('td', 'post-date', post.date || '날짜 미등록'), node('td', 'post-views', number(post.views)));
+        for (const text of [post.writer, post.created_at.slice(0, 10)]) meta.append(node('span', '', text));
+        title.append(postSummary(post), link, meta);
+        row.append(node('td', 'post-number', String(post.index)), title, node('td', 'post-writer', post.writer),
+          node('td', 'post-date', post.created_at.slice(0, 10)), node('td', 'post-views', String(post.comment_count)));
         $('#board-list').append(row);
       }
-      $('#board-empty').hidden = matched.length !== 0;
-      $('#empty-title').textContent = query ? '찾는 이야기가 없어요.' : '첫 번째 이야기를 기다리고 있어요.';
-      $('#empty-description').textContent = query ? '다른 검색어로 찾아보거나 전체 이야기를 확인해 보세요.' : '기억에 남은 한 끼, 짧은 이야기로 시작해 보세요.';
-      $('#empty-write').hidden = !!query; $('#clear-search').hidden = !query;
-      $('#board-pagination').hidden = pages <= 1;
-      $('#board-page-label').textContent = `${currentPage} / ${pages}`;
+      $('#board-empty').hidden = result.matched !== 0;
+      $('#empty-title').textContent = query || type !== 'all' ? '찾는 이야기가 없어요.' : '첫 번째 맛집 이야기를 기다리고 있어요.';
+      $('#empty-description').textContent = '음식점 후기와 별점을 남기거나 나만의 북마크를 소개해 주세요.';
+      $('#empty-write').hidden = !!query; $('#clear-search').hidden = !query && type === 'all';
+      $('#board-pagination').hidden = pages <= 1; $('#board-page-label').textContent = `${currentPage} / ${pages}`;
       $('#board-previous').disabled = currentPage <= 1; $('#board-next').disabled = currentPage >= pages;
       feedback('');
-    } catch (error) {
-      $('#board-list').replaceChildren(); $('#board-empty').hidden = true; $('#board-pagination').hidden = true;
-      feedback(error.message, true);
-    }
+    } catch (error) { if (request === revision) { $('#board-list').replaceChildren(); feedback(error.message, true); } }
+    finally { if (request === revision) $('#board-list').setAttribute('aria-busy', 'false'); }
   }
-  $('#board-search-form').addEventListener('submit', event => { event.preventDefault(); query = $('#board-query').value.trim().toLocaleLowerCase('ko-KR'); currentPage = 1; render(); });
-  $('#board-query').addEventListener('input', () => { if (!$('#board-query').value && query) { query = ''; currentPage = 1; render(); } });
-  $('#clear-search').addEventListener('click', () => { $('#board-query').value = ''; query = ''; currentPage = 1; render(); });
+  function filters() { document.querySelectorAll('[data-post-type]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.postType === type))); }
+  $('#board-search-form').addEventListener('submit', event => { event.preventDefault(); query = $('#board-query').value.trim(); currentPage = 1; render(); });
+  document.querySelectorAll('[data-post-type]').forEach(button => button.addEventListener('click', () => { type = button.dataset.postType; currentPage = 1; filters(); render(); }));
+  $('#clear-search').addEventListener('click', () => { $('#board-query').value = ''; query = ''; type = 'all'; currentPage = 1; filters(); render(); });
   for (const [selector, delta] of [['#board-previous', -1], ['#board-next', 1]]) $(selector).addEventListener('click', () => { currentPage += delta; render(); });
-  window.addEventListener('storage', event => { if (event.key === 'boards' || event.key === null) render(); });
-  render();
+  return render();
 }
 
-function initializeEditor() {
-  const form = $(page === 'write' ? '#writeFrm' : '#modifyFrm');
+async function initializeEditor() {
+  const user = requireMember(), form = $(page === 'write' ? '#writeFrm' : '#modifyFrm');
+  let post;
   if (page === 'modify') {
-    const post = findPost(index);
-    for (const key of ['subject', 'writer', 'content']) form.elements[key].value = post[key];
-    $('#back').href = urlFor('view', post.index); form.hidden = false;
-  } else {
-    try { form.elements.writer.value = currentUser()?.name || ''; } catch { /* 회원 저장소 오류는 게시글 작성과 분리합니다. */ }
+    post = await sharedRequest(apiFor(index));
+    if (post.authorId !== user.id) throw new Error('본인이 작성한 글만 수정할 수 있습니다.');
+    for (const key of ['subject', 'content']) form.elements[key].value = post[key];
+    $('#back').href = urlFor('view', post.index);
   }
+  form.elements.writer.value = user.name; form.elements.writer.readOnly = true;
+  const context = initializeContextEditor($('#post-context-editor'), user, post);
+  form.hidden = false;
   function count() { $('#content-count').textContent = `${form.elements.content.value.length.toLocaleString('ko-KR')} / 10,000`; }
   form.elements.content.addEventListener('input', count); count();
-  form.addEventListener('submit', event => {
-    event.preventDefault();
-    const button = form.querySelector('[type=submit]'); button.disabled = true;
+  form.addEventListener('submit', async event => {
+    event.preventDefault(); const button = form.querySelector('[type=submit]'); button.disabled = true; feedback('');
     try {
-      const values = Object.fromEntries(new FormData(form));
-      const post = page === 'modify' ? updatePost(index, values) : createPost(values);
-      location.href = urlFor('view', post.index);
+      const values = { subject: form.elements.subject.value, content: form.elements.content.value, ...context() };
+      const saved = await sharedRequest(page === 'modify' ? apiFor(index) : '/api/board/posts', { method: page === 'modify' ? 'PATCH' : 'POST', body: values });
+      location.href = urlFor('view', saved.index);
     } catch (error) { feedback(error.message, true); button.disabled = false; }
   });
 }
 
-function initializeView() {
-  const post = findPost(index, { countView: true });
+async function initializeView() {
+  const post = await sharedRequest(apiFor(index));
   $('#subject').textContent = post.subject; $('#writer').textContent = post.writer;
-  $('#date').textContent = post.date || '날짜 미등록';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(post.date || '')) $('#date').dateTime = post.date;
-  $('#views').textContent = number(post.views); $('#content').textContent = post.content;
-  $('#post-label').textContent = `이야기 #${Number(post.index) + 1}`;
-  $('#modify').href = urlFor('modify', post.index);
-  $('#viewFrm').hidden = false; $('#post-actions').hidden = false;
-  document.title = `${post.subject} · 맛집기행`;
+  $('#date').textContent = post.date; $('#date').dateTime = post.date;
+  $('#content').textContent = post.content; $('#post-label').textContent = `${kindLabel(post)} #${post.index}`;
+  $('#modify').href = urlFor('modify', post.index); $('#viewFrm').hidden = false;
+  $('#post-actions').hidden = post.authorId !== currentUser()?.id;
+  renderPostContext(post, $('#post-context-view')); document.title = `${post.subject} · 맛집기행`;
   const dialog = $('#delete-dialog');
   $('#delete').addEventListener('click', () => { $('#delete-feedback').hidden = true; dialog.showModal(); });
   for (const selector of ['#cancel-delete', '#cancel-delete-icon']) $(selector).addEventListener('click', () => dialog.close());
-  $('#confirm-delete').addEventListener('click', () => {
-    try { deletePost(index); location.href = './list.html'; }
-    catch (error) { $('#delete-feedback').textContent = error.message; $('#delete-feedback').hidden = false; }
+  $('#confirm-delete').addEventListener('click', async () => {
+    const button = $('#confirm-delete'); button.disabled = true;
+    try { await sharedRequest(apiFor(index), { method: 'DELETE', body: {} }); location.href = './list.html'; }
+    catch (error) { $('#delete-feedback').textContent = error.message; $('#delete-feedback').hidden = false; button.disabled = false; }
+  });
+  $('#post-discussion').hidden = false;
+  function comments(items) {
+    $('#comment-list').replaceChildren(); $('#comment-count').textContent = items.length; $('#views').textContent = items.length;
+    if (!items.length) $('#comment-list').append(node('p', 'context-hint', '아직 댓글이 없어요. 첫 의견을 남겨보세요.'));
+    items.forEach(comment => {
+      const card = node('article', 'comment-item'), meta = node('div', 'comment-meta');
+      meta.append(node('strong', '', comment.writer), node('time', '', new Date(comment.created_at).toLocaleString('ko-KR')));
+      if (comment.authorId === currentUser()?.id) {
+        const button = node('button', 'comment-delete', '댓글 삭제'); button.type = 'button';
+        button.addEventListener('click', async () => {
+          button.disabled = true;
+          try { await sharedRequest(`${apiFor(index)}/comments/${comment.id}`, { method: 'DELETE', body: {} }); comments((await sharedRequest(apiFor(index))).comments); }
+          catch (error) { $('#comment-feedback').textContent = error.message; button.disabled = false; }
+        }); meta.append(button);
+      }
+      card.append(meta, node('p', '', comment.content)); $('#comment-list').append(card);
+    });
+  }
+  comments(post.comments);
+  $('#comment-form').hidden = !currentUser(); $('#comment-login').hidden = !!currentUser(); $('#comment-author').textContent = currentUser()?.name || '';
+  $('#comment-form').addEventListener('submit', async event => {
+    event.preventDefault(); const button = event.currentTarget.querySelector('[type=submit]'); button.disabled = true; $('#comment-feedback').textContent = '';
+    try { await sharedRequest(`${apiFor(index)}/comments`, { method: 'POST', body: { content: $('#comment-content').value } }); $('#comment-content').value = ''; comments((await sharedRequest(apiFor(index))).comments); }
+    catch (error) { $('#comment-feedback').textContent = error.message; }
+    finally { button.disabled = false; }
   });
 }
 
 try {
-  if (page === 'list') initializeList();
-  else if (page === 'write' || page === 'modify') initializeEditor();
-  else if (page === 'view') initializeView();
-} catch (error) { feedback(error.message, true); }
+  const config = await sharedRequest('/api/config');
+  if (!config.sharedBoardConfigured) throw new Error('공유 게시판을 준비하는 중입니다. DB 연결 후 이용해 주세요. 이전 브라우저 게시글은 삭제하지 않았습니다.');
+  await initializeSharedAuth(true);
+  document.querySelector('.board-footer > span').textContent = '후기와 북마크를 함께 나누는 공간.';
+  if (page === 'list') await initializeList();
+  else if (page === 'write' || page === 'modify') await initializeEditor();
+  else if (page === 'view') await initializeView();
+} catch (error) {
+  document.querySelector('.board-editor')?.setAttribute('hidden', '');
+  feedback(error.message, true);
+}

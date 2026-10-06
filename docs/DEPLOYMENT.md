@@ -1,6 +1,6 @@
 # 맛집기행 첫 웹 배포 — Render
 
-이 단계에서는 HTML/CSS/JavaScript 화면과 Node.js API 중계 서버를 하나의 HTTPS 웹 서비스로 배포합니다. 회원·북마크·게시글은 여전히 각 브라우저의 localStorage에 저장됩니다. 서버 인증이나 기기 간 동기화는 다음 개발 단계입니다.
+HTML/CSS/JavaScript 화면과 Node.js 서버를 하나의 HTTPS 웹 서비스로 배포합니다. Supabase를 연결한 환경에서는 회원·세션·게시글·댓글을 공용 DB에 저장합니다. 개인 북마크는 브라우저에 남고, 게시판에 공유한 가게 목록은 게시글에 별도로 저장됩니다.
 
 2026-10-06 첫 배포를 완료했습니다. 공개 주소는 [맛집기행](https://matzip-journey.onrender.com), 배포용 저장소는 [enjoytrip-deploy](https://github.com/SangMin4973/enjoytrip-deploy)입니다. 아래 설정으로 운영 중이며 확인 결과는 `docs/TEST_PLAN.md`에 기록했습니다. 코드를 갱신할 때는 `git push deploy main`으로 배포 저장소에 반영합니다.
 
@@ -55,6 +55,8 @@ Blueprint에 새 키를 `sync: false`로 추가해도 기존 서비스에 입력
 | `YOUTUBE_API_KEY` | 선택: 앱 내 관련 영상 검색 |
 | `NCP_NAVER_CLIENT_ID` | NAVER API HUB Client ID — 가게 이미지 검색 |
 | `NCP_NAVER_CLIENT_SECRET` | NAVER API HUB Client Secret — 서버에서만 사용 |
+| `SUPABASE_URL` | 공유 게시판·서버 로그인 DB의 프로젝트 URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | 기존 service_role API 키 — 서버 환경변수에서만 사용 |
 | `TOUR_API_SERVICE_KEY` | 선택: 실제 관광정보 조회 |
 
 `PORT`는 Render가 제공하는 값을 사용합니다. 로컬 `.env`의 `PORT=5179`를 배포 환경에 복사할 필요가 없습니다. 현재 사용하지 않는 Google 이미지 검색 키도 첫 배포에 필요하지 않습니다.
@@ -62,6 +64,14 @@ Blueprint에 새 키를 `sync: false`로 추가해도 기존 서비스에 입력
 가게 이미지에는 NAVER API HUB의 `https://naverapihub.apigw.ntruss.com/search/v1/image`를 사용합니다. 애플리케이션에서 이미지 검색 권한을 선택하고 위 두 값을 Render Environment에 추가합니다. 네이버 개발자센터의 `X-Naver-Client-Id` 방식과 다른 인증 방식이므로 API HUB 키를 사용합니다. 서버가 지역·가게 이름으로 최대 5개를 요청하며, 가게 목록의 이름 아래 썸네일을 눌러 확대할 수 있습니다. 화면에 보이는 가게부터 최대 2건씩 조회하고 동일 검색은 서버 메모리에 10분간 캐시합니다.
 
 카카오 JavaScript 키는 지도 실행을 위해 브라우저에 전달됩니다. YouTube·TourAPI 키는 서버에서만 사용됩니다. 비밀 키를 채팅·문서·커밋에 넣지 말고 서비스의 Environment 입력란에 입력합니다.
+
+### 공유 게시판 DB
+
+1. Supabase 무료 프로젝트를 생성합니다. 현재 프로젝트는 `matzip-journey`이며 테이블 자동 공개는 끄고 자동 RLS는 켰습니다.
+2. SQL Editor에서 `supabase/schema.sql`을 실행합니다. 회원·세션·글·댓글 테이블, 검색/페이지 조회 함수와 서버 역할의 권한을 만듭니다. 공개 역할에는 테이블 접근을 허용하지 않습니다.
+3. 위 Supabase 환경변수 두 개를 Render에 등록합니다. service_role 키는 RLS를 우회하므로 서버에만 보관하며 `/api/config`, 브라우저 코드 또는 Git에 넣지 않습니다.
+4. 서버 계정을 새로 등록하고 로그인합니다. 이전 브라우저 계정·게시글은 자동 이관하지 않습니다. 동일 아이디로 서버 계정을 등록하면 그 브라우저의 기존 북마크를 재사용할 수 있습니다.
+5. 서로 다른 계정/브라우저에서 후기·별점·공유 목록·댓글을 읽고, 다른 작성자의 수정·삭제가 거부되는지 확인합니다. 서버 계정의 비밀번호 분실 이메일 재설정은 아직 지원하지 않습니다.
 
 ## 4. 배포 후 카카오 도메인 등록
 

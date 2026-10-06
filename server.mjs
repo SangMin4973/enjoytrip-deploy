@@ -7,6 +7,9 @@ import { tourRoute } from './server/tour.js';
 import { createYoutubeSearch } from './server/youtube.js';
 import { createRestaurantImageSearch } from './server/restaurant-images.js';
 import { createNaverImageSearch } from './server/naver-images.js';
+import { createSharedDb } from './server/shared-db.js';
+import { createSharedAuth } from './server/shared-auth.js';
+import { createSharedBoard } from './server/shared-board.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 if (existsSync(path.join(root, '.env'))) process.loadEnvFile(path.join(root, '.env'));
@@ -17,23 +20,45 @@ function json(response, status, value) {
   response.end(JSON.stringify(value));
 }
 
-// 실행과 API 키 중계만 담당합니다. 회원 인증/DB 서버는 구현하지 않습니다.
-export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions = {}, naverImageOptions = {} } = {}) {
+async function bodyJson(request) {
+  if (!/^application\/json(?:;|$)/i.test(request.headers['content-type'] || '')) throw Object.assign(new Error('JSON 형식으로 요청해 주세요.'), { status: 415 });
+  let size = 0; const chunks = [];
+  for await (const chunk of request) { size += chunk.length; if (size > 131072) throw Object.assign(new Error('요청 크기가 너무 큽니다.'), { status: 413 }); chunks.push(chunk); }
+  try { const value = JSON.parse(Buffer.concat(chunks).toString('utf8')); if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(); return value; }
+  catch { throw Object.assign(new Error('요청 내용이 올바르지 않습니다.'), { status: 400 }); }
+}
+
+export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions = {}, naverImageOptions = {}, sharedDbOptions = {} } = {}) {
+  const db = createSharedDb(sharedDbOptions), auth = createSharedAuth(db), board = createSharedBoard(db, auth);
   const searchYoutube = createYoutubeSearch(youtubeOptions);
   const searchImage = createRestaurantImageSearch(imageOptions);
   const searchNaverImages = createNaverImageSearch(naverImageOptions);
   return createServer(async (request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
-    if (!['GET', 'HEAD'].includes(request.method)) { json(response, 405, { error: '지원하지 않는 요청입니다.' }); return; }
     try {
       const url = new URL(request.url, 'http://localhost');
+      if (url.pathname.startsWith('/api/auth/') || url.pathname.startsWith('/api/board/')) {
+        if (!db.configured) { json(response, 503, { error: '공유 DB를 연결하는 중입니다. 잠시 후 이용해 주세요.' }); return; }
+        if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) { json(response, 405, { error: '지원하지 않는 요청입니다.' }); return; }
+        const mutating = request.method !== 'GET';
+        if (mutating) {
+          let origin; try { origin = new URL(request.headers.origin); } catch { /* 누락된 Origin은 거부합니다. */ }
+          if (!origin || !['http:', 'https:'].includes(origin.protocol) || origin.host !== request.headers.host || request.headers['sec-fetch-site'] === 'cross-site') {
+            json(response, 403, { error: '같은 사이트에서만 변경 요청을 보낼 수 있습니다.' }); return;
+          }
+        }
+        const input = mutating ? await bodyJson(request) : {};
+        json(response, 200, url.pathname.startsWith('/api/auth/') ? await auth.route(url.pathname, request, response, input) : await board.route(url, request, input));
+        return;
+      }
+      if (!['GET', 'HEAD'].includes(request.method)) { json(response, 405, { error: '지원하지 않는 요청입니다.' }); return; }
       // 배포 상태 확인은 외부 API 호출이나 비밀 설정 없이 응답합니다.
       if (url.pathname === '/healthz') {
         json(response, 200, { status: 'ok' });
         return;
       }
       if (url.pathname === '/api/config') {
-        json(response, 200, { tourApiConfigured: !!process.env.TOUR_API_SERVICE_KEY?.trim(), kakaoMapJsKey: process.env.KAKAO_MAP_JS_KEY || '',
+        json(response, 200, { sharedBoardConfigured: db.configured, tourApiConfigured: !!process.env.TOUR_API_SERVICE_KEY?.trim(), kakaoMapJsKey: process.env.KAKAO_MAP_JS_KEY || '',
           restaurantImagesConfigured: !!(process.env.GOOGLE_CUSTOM_SEARCH_API_KEY?.trim() && process.env.GOOGLE_CUSTOM_SEARCH_CX?.trim()) });
         return;
       }

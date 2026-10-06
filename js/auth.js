@@ -1,4 +1,17 @@
 import { readStorage, writeStorage, removeStorage } from './storage.js';
+import { sharedRequest } from './shared-client.js';
+
+let shared = false, sharedUser = null;
+export async function initializeSharedAuth(enabled) {
+  shared = !!enabled;
+  if (shared) sharedUser = (await sharedRequest('/api/auth/me')).user;
+}
+export const usesSharedAuth = () => shared;
+async function remote(path, body) {
+  const result = await sharedRequest(`/api/auth/${path}`, { method: 'POST', body });
+  if (Object.hasOwn(result, 'user')) sharedUser = result.user;
+  return result;
+}
 
 function users() {
   const value = readStorage('users', []);
@@ -36,6 +49,7 @@ function publicUser(user) {
 }
 
 export function currentUser() {
+  if (shared) return sharedUser;
   const expiresAt = readStorage('sessionExpiresAt', null);
   if (typeof expiresAt === 'number' && expiresAt <= Date.now()) {
     logout();
@@ -45,6 +59,7 @@ export function currentUser() {
 }
 
 export async function register({ id, name, email, password }) {
+  if (shared) return (await sharedRequest('/api/auth/register', { method: 'POST', body: { id, name, email, password } })).user;
   id = id.trim(); name = name.trim(); email = email.trim();
   validateProfile({ id, name, email });
   const record = await passwordRecord(password);
@@ -58,6 +73,7 @@ export async function register({ id, name, email, password }) {
 }
 
 export async function login(identifier, password, { remember = true } = {}) {
+  if (shared) return (await remote('login', { identifier, password, remember })).user;
   const value = identifier.trim();
   const user = users().find((entry) => entry.id === value || entry.email.toLowerCase() === value.toLowerCase());
   if (!user || (await passwordRecord(password, user.salt)).passwordHash !== user.passwordHash) {
@@ -71,6 +87,7 @@ export async function login(identifier, password, { remember = true } = {}) {
 }
 
 export function logout() {
+  if (shared) return remote('logout', {}).then(() => { sharedUser = null; removeStorage('myPageAccess'); });
   removeStorage('session');
   removeStorage('sessionExpiresAt');
   removeStorage('myPageAccess');
@@ -78,6 +95,7 @@ export function logout() {
 
 // 마이페이지 확인은 현재 회원의 해시만 비교합니다. 로그인 만료 시간을 연장하지 않습니다.
 export async function confirmMyPage(password) {
+  if (shared) { await remote('confirm', { password }); writeStorage('myPageAccess', { userId: sharedUser.id, confirmedAt: Date.now() }); return; }
   const current = currentUser();
   if (!current) throw new Error('먼저 로그인해 주세요.');
   const user = users().find(entry => entry.id === current.id);
@@ -89,12 +107,14 @@ export async function confirmMyPage(password) {
 }
 
 export function isMyPageConfirmed() {
+  if (shared) { const value = readStorage('myPageAccess', null); return !!sharedUser && value?.userId === sharedUser.id && value.confirmedAt > Date.now() - 600000; }
   const current = currentUser();
   const access = readStorage('myPageAccess', null);
   return !!current && access?.userId === current.id && access.sessionExpiresAt === readStorage('sessionExpiresAt', null);
 }
 
 export async function updateProfile({ name, email, password }) {
+  if (shared) { const result = await remote('profile', { name, email, password }); if (password) removeStorage('myPageAccess'); return result.user; }
   const user = currentUser();
   if (!user) throw new Error('먼저 로그인해 주세요.');
   name = name.trim(); email = email.trim();
@@ -110,6 +130,7 @@ export async function updateProfile({ name, email, password }) {
 }
 
 export function deleteAccount() {
+  if (shared) return remote('delete', {}).then(() => { removeStorage('myPageAccess'); });
   const user = currentUser();
   if (!user) throw new Error('먼저 로그인해 주세요.');
   writeStorage('users', users().filter((entry) => entry.id !== user.id));
@@ -118,6 +139,7 @@ export function deleteAccount() {
 
 // 수업용 데모: 이메일 발송/본인 인증 서버가 없어 실제 서비스 인증으로 쓸 수 없습니다.
 export async function resetPassword({ id, email, password }) {
+  if (shared) throw new Error('공유 계정의 비밀번호는 로그인 후 마이 페이지에서 변경할 수 있습니다. 비밀번호를 잊은 경우의 이메일 인증 재설정은 아직 지원하지 않습니다.');
   const user = users().find((entry) => entry.id === id.trim() && entry.email.toLowerCase() === email.trim().toLowerCase());
   if (!user) throw new Error('아이디와 이메일이 일치하는 회원이 없습니다.');
   const record = await passwordRecord(password);
