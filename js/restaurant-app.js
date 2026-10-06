@@ -52,18 +52,22 @@ export function initRestaurantApp() {
     button.dataset.action = 'select'; button.dataset.id = restaurant.id;
     button.setAttribute('aria-label', `${restaurant.name} 인사이트 보기`);
     const text = element('div', 'restaurant-card-text');
-    text.append(element('h3', '', restaurant.name), element('p', '', restaurant.phone || '전화번호 미등록'), element('p', '', restaurant.address || '주소 미등록'));
-    text.append(element('p', 'restaurant-rating', '별점 제공 없음 · 카카오맵에서 확인'));
+    text.append(element('h3', '', restaurant.name));
     button.append(text);
+    const photos = element('div'); imageGallery.add(restaurant, photos);
+    const info = element('div', 'restaurant-card-info');
+    info.append(element('p', '', restaurant.phone || '전화번호 미등록'), element('p', '', restaurant.address || '주소 미등록'), element('p', 'restaurant-rating', '별점 제공 없음 · 카카오맵에서 확인'));
+    info.addEventListener('click', () => { try { selectRestaurant(restaurant.id); } catch (error) { toast(error.message); } });
     const saved = savedIds().has(restaurant.id);
     const star = element('button', `save-restaurant${saved ? ' saved' : ''}`, saved ? '★' : '☆');
     star.type = 'button'; star.dataset.action = 'save'; star.dataset.id = restaurant.id;
     star.setAttribute('aria-label', `${restaurant.name} 북마크 선택`); star.setAttribute('aria-pressed', String(saved));
-    article.append(button, star);
+    article.append(button, photos, info, star);
     return article;
   }
 
   function renderList() {
+    imageGallery.clear();
     const list = $('#restaurant-list'), scrollTop = list.scrollTop;
     list.replaceChildren();
     let missing = 0;
@@ -105,7 +109,6 @@ export function initRestaurantApp() {
 
   function renderInsights() {
     cancelVideos();
-    imageGallery.clear();
     const restaurant = visibleRestaurants.find(item => item.id === view.selectedId);
     $('#restaurant-insights').hidden = !restaurant;
     root.classList.toggle('insights-open', !!restaurant);
@@ -115,7 +118,6 @@ export function initRestaurantApp() {
     $('#insight-description').textContent = [restaurant.category, restaurant.phone || '전화번호 미등록'].filter(Boolean).join(' · ');
     setSearchLinks(restaurant);
     loadVideos(restaurant);
-    imageGallery.load(restaurant);
     $('#restaurant-insights .insight-scroll').scrollTop = 0;
   }
 
