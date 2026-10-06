@@ -109,6 +109,7 @@ export function initRestaurantApp() {
 
   function renderInsights() {
     cancelVideos();
+    $('#insight-images').replaceChildren();
     const restaurant = visibleRestaurants.find(item => item.id === view.selectedId);
     $('#restaurant-insights').hidden = !restaurant;
     root.classList.toggle('insights-open', !!restaurant);
@@ -117,6 +118,9 @@ export function initRestaurantApp() {
     $('#insight-address').textContent = restaurant.address;
     $('#insight-description').textContent = [restaurant.category, restaurant.phone || '전화번호 미등록'].filter(Boolean).join(' · ');
     setSearchLinks(restaurant);
+    const photos = element('div');
+    $('#insight-images').append(photos);
+    imageGallery.add(restaurant, photos, { detail: true });
     loadVideos(restaurant);
     $('#restaurant-insights .insight-scroll').scrollTop = 0;
   }

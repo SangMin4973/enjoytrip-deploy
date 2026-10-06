@@ -5,7 +5,8 @@ export function initNaverImageGallery() {
   const enlarged = document.querySelector('#restaurant-image-enlarged');
   const enlargedFeedback = document.querySelector('#restaurant-image-enlarged-feedback');
   const jobs = new WeakMap();
-  let batch = { controller: new AbortController(), queue: [], running: 0 };
+  const newBatch = () => ({ controller: new AbortController(), queue: [], running: 0, results: new Map() });
+  let batch = newBatch();
   const observer = new IntersectionObserver(entries => {
     for (const entry of entries) {
       if (!entry.isIntersecting) continue;
@@ -17,7 +18,7 @@ export function initNaverImageGallery() {
 
   function clear() {
     batch.controller.abort(); observer.disconnect();
-    batch = { controller: new AbortController(), queue: [], running: 0 };
+    batch = newBatch();
     if (dialog.open) dialog.close();
   }
 
@@ -31,7 +32,25 @@ export function initNaverImageGallery() {
 
   function enqueue(job) {
     if (job.queued) return;
-    job.queued = true; batch.queue.push(job); pump(batch);
+    job.queued = true;
+    if (job.detail) batch.queue.unshift(job);
+    else batch.queue.push(job);
+    pump(batch);
+  }
+
+  function searchImages(query, state) {
+    if (!state.results.has(query)) {
+      const request = (async () => {
+        const response = await fetch(`/api/naver/images?q=${encodeURIComponent(query)}`, { signal: AbortSignal.any([state.controller.signal, AbortSignal.timeout(15000)]) });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || '이미지를 불러오지 못했어요.');
+        if (!Array.isArray(result.images)) throw new Error('이미지 검색 결과를 읽지 못했어요.');
+        return result.images.slice(0, 5);
+      })();
+      state.results.set(query, request);
+      request.catch(() => { if (state.results.get(query) === request) state.results.delete(query); });
+    }
+    return state.results.get(query);
   }
 
   function pump(state) {
@@ -50,12 +69,8 @@ export function initNaverImageGallery() {
     feedback.textContent = '가게 이미지 검색 중…';
     try {
       const query = buildRestaurantSearchQuery(restaurant);
-      const response = await fetch(`/api/naver/images?q=${encodeURIComponent(query)}`, { signal: AbortSignal.any([state.controller.signal, AbortSignal.timeout(15000)]) });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '이미지를 불러오지 못했어요.');
-      if (!Array.isArray(result.images)) throw new Error('이미지 검색 결과를 읽지 못했어요.');
+      const images = await searchImages(query, state);
       if (state !== batch || !box.isConnected) return;
-      const images = result.images.slice(0, 5);
       row.replaceChildren();
       feedback.textContent = images.length ? '' : '검색된 가게 이미지가 없어요.';
       images.forEach((item, index) => {
@@ -82,8 +97,8 @@ export function initNaverImageGallery() {
     }
   }
 
-  function add(restaurant, box) {
-    box.className = 'restaurant-card-images';
+  function add(restaurant, box, { detail = false } = {}) {
+    box.className = detail ? 'restaurant-detail-images' : 'restaurant-card-images';
     box.setAttribute('aria-label', `${restaurant.name} 검색 이미지`);
     const row = document.createElement('div'); row.className = 'restaurant-image-list';
     for (let index = 0; index < 5; index++) {
@@ -91,8 +106,10 @@ export function initNaverImageGallery() {
     }
     const feedback = document.createElement('p'); feedback.className = 'restaurant-image-feedback'; feedback.setAttribute('role', 'status');
     box.append(row, feedback);
-    const job = { restaurant, box, row, feedback, queued: false };
-    jobs.set(box, job); observer.observe(box);
+    const job = { restaurant, box, row, feedback, queued: false, detail };
+    jobs.set(box, job);
+    if (detail) enqueue(job);
+    else observer.observe(box);
   }
 
   enlarged.addEventListener('load', () => { enlargedFeedback.textContent = ''; });
