@@ -62,6 +62,7 @@ body.workspace-screen { padding: 0; overflow: hidden; background: var(--food-yel
 .results-notice { flex-shrink: 0; margin: 0; padding: 9px 12px; font-size: 10px; line-height: 1.7; color: #997044; border-top: 1px dashed var(--food-line); }
 .search-pagination { display: flex; align-items: center; justify-content: space-between; gap: 9px; padding: 9px 10px; flex-shrink: 0; }
 .search-pagination .food-button { padding: 5px 9px; font-size: 10px; }
+.search-pagination .food-button:disabled { background: #e5e5e5; color: #777; border-color: #aaa; box-shadow: none; opacity: 1; cursor: default; transform: none; }
 .search-pagination span { font-size: 9px; line-height: 1.8; text-align: center; }
 .source-caption { margin: 13px 0; font-size: 11px; line-height: 1.9; color: #997044; }
 .bookmark-name-submit { margin-top: 22px; }
