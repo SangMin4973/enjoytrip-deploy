@@ -6,6 +6,7 @@ import path from 'node:path';
 import { tourRoute } from './server/tour.js';
 import { createYoutubeSearch } from './server/youtube.js';
 import { createRestaurantImageSearch } from './server/restaurant-images.js';
+import { createNaverImageSearch } from './server/naver-images.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 if (existsSync(path.join(root, '.env'))) process.loadEnvFile(path.join(root, '.env'));
@@ -17,9 +18,10 @@ function json(response, status, value) {
 }
 
 // 실행과 API 키 중계만 담당합니다. 회원 인증/DB 서버는 구현하지 않습니다.
-export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions = {} } = {}) {
+export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions = {}, naverImageOptions = {} } = {}) {
   const searchYoutube = createYoutubeSearch(youtubeOptions);
   const searchImage = createRestaurantImageSearch(imageOptions);
+  const searchNaverImages = createNaverImageSearch(naverImageOptions);
   return createServer(async (request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     if (!['GET', 'HEAD'].includes(request.method)) { json(response, 405, { error: '지원하지 않는 요청입니다.' }); return; }
@@ -44,6 +46,10 @@ export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions
         json(response, 200, await searchYoutube(url.searchParams.get('q')));
         return;
       }
+      if (url.pathname === '/api/naver/images') {
+        json(response, 200, await searchNaverImages(url.searchParams.get('q')));
+        return;
+      }
       if (url.pathname === '/api/restaurant-image') {
         json(response, 200, await searchImage(url.searchParams.get('q')));
         return;
@@ -61,7 +67,7 @@ export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions
     } catch (error) {
       json(response, error.code === 'ENOENT' ? 404 : error.status || 400, {
         error: error.code === 'ENOENT' ? '파일을 찾을 수 없습니다.' : error.message,
-        ...(['TourApiError', 'YoutubeApiError', 'ImageSearchError'].includes(error.name) ? { code: error.code } : {}),
+        ...(['TourApiError', 'YoutubeApiError', 'ImageSearchError', 'NaverImageError'].includes(error.name) ? { code: error.code } : {}),
       });
     }
   });

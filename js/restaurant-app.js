@@ -5,6 +5,7 @@ import { loadKakaoSdk } from './kakao-sdk.js';
 import { LOGIN_MAP_CONFIG } from './map-config.js';
 import { searchYoutubeVideos } from './youtube-api.js';
 import { buildRestaurantSearchQuery } from './restaurant-search.js';
+import { initNaverImageGallery } from './naver-images.js';
 
 const $ = selector => document.querySelector(selector);
 
@@ -24,6 +25,7 @@ export function initRestaurantApp() {
   let route = 'home', active = false, mapKey = LOGIN_MAP_CONFIG.appKey;
   let revision = 0, toastTimer, resizeTimer, bookmarkRestaurantId, confirmTarget = 'bookmarks';
   let videoRevision = 0, videoController, shownVideos = [];
+  const imageGallery = initNaverImageGallery();
 
   function toast(message) {
     const box = $('#explore-toast'); box.textContent = message; box.hidden = !message;
@@ -103,6 +105,7 @@ export function initRestaurantApp() {
 
   function renderInsights() {
     cancelVideos();
+    imageGallery.clear();
     const restaurant = visibleRestaurants.find(item => item.id === view.selectedId);
     $('#restaurant-insights').hidden = !restaurant;
     root.classList.toggle('insights-open', !!restaurant);
@@ -112,6 +115,7 @@ export function initRestaurantApp() {
     $('#insight-description').textContent = [restaurant.category, restaurant.phone || '전화번호 미등록'].filter(Boolean).join(' · ');
     setSearchLinks(restaurant);
     loadVideos(restaurant);
+    imageGallery.load(restaurant);
     $('#restaurant-insights .insight-scroll').scrollTop = 0;
   }
 
@@ -519,6 +523,7 @@ export function initRestaurantApp() {
     requestMyPage,
     async setRoute(next) {
       cancelVideos();
+      imageGallery.clear();
       active = true; route = next; const currentRevision = ++revision;
       root.dataset.view = next;
       $('#search-home').hidden = next !== 'home'; $('#results-pane').hidden = next !== 'results'; $('#bookmark-page').hidden = next !== 'bookmarks';
@@ -539,6 +544,7 @@ export function initRestaurantApp() {
     },
     deactivate() {
       cancelVideos();
+      imageGallery.clear();
       active = false; revision++; clearTimeout(toastTimer); $('#explore-toast').hidden = true;
       [
         'save-bookmark-dialog',

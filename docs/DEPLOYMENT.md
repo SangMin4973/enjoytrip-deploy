@@ -53,9 +53,13 @@ Blueprint에 새 키를 `sync: false`로 추가해도 기존 서비스에 입력
 | `HOST` | `0.0.0.0` — Render 프록시의 접속 허용 |
 | `KAKAO_MAP_JS_KEY` | 본인 카카오 앱의 JavaScript 키 — 지도·음식점 검색 |
 | `YOUTUBE_API_KEY` | 선택: 앱 내 관련 영상 검색 |
+| `NCP_NAVER_CLIENT_ID` | NAVER API HUB Client ID — 가게 이미지 검색 |
+| `NCP_NAVER_CLIENT_SECRET` | NAVER API HUB Client Secret — 서버에서만 사용 |
 | `TOUR_API_SERVICE_KEY` | 선택: 실제 관광정보 조회 |
 
 `PORT`는 Render가 제공하는 값을 사용합니다. 로컬 `.env`의 `PORT=5179`를 배포 환경에 복사할 필요가 없습니다. 현재 사용하지 않는 Google 이미지 검색 키도 첫 배포에 필요하지 않습니다.
+
+가게 이미지에는 NAVER API HUB의 `https://naverapihub.apigw.ntruss.com/search/v1/image`를 사용합니다. 애플리케이션에서 이미지 검색 권한을 선택하고 위 두 값을 Render Environment에 추가합니다. 네이버 개발자센터의 `X-Naver-Client-Id` 방식과 다른 인증 방식이므로 API HUB 키를 사용합니다. 서버가 지역·가게 이름으로 최대 5개를 요청하며, 음식점 상세의 가게 이미지 목록에서 눌러 확대할 수 있습니다. 동일 검색은 서버 메모리에 10분간 캐시합니다.
 
 카카오 JavaScript 키는 지도 실행을 위해 브라우저에 전달됩니다. YouTube·TourAPI 키는 서버에서만 사용됩니다. 비밀 키를 채팅·문서·커밋에 넣지 말고 서비스의 Environment 입력란에 입력합니다.
 

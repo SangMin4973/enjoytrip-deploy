@@ -12,7 +12,7 @@
 | 프로젝트명 | 맛집기행 |
 | 프로젝트 유형 | EnjoyTrip 프론트엔드 실습 프로젝트 |
 | 주요 기능 | 음식점 검색, 지도 조회, 맛집 인사이트, 관련 영상, 개인 북마크, 관광정보, 회원 관리 |
-| 주요 데이터 | 카카오 장소 정보, YouTube 영상 검색, Google 이미지 검색, 한국관광공사 관광정보 |
+| 주요 데이터 | 카카오 장소 정보, YouTube 영상 검색, 네이버 이미지 검색, 한국관광공사 관광정보 |
 | 핵심 기술 | HTML, CSS, JavaScript, ES Modules, Node.js, OpenAPI, localStorage |
 | 실행 환경 | Node.js 22 이상 / 최신 웹 브라우저 |
 
@@ -174,21 +174,22 @@ PC 화면에서는 음식점 목록, 선택한 음식점의 인사이트, 지도
 
 ### 7. 음식점 이미지 검색
 
-음식점 카드의 썸네일 영역과 `사진 제공 없음` 표시는 제거했습니다. 목록은 이름·전화번호·주소·별점 안내를 표시하며 이미지 검색을 요청하지 않습니다. 아래 이미지 검색 모듈은 이전 구현으로 보관되어 있으며 현재 화면에서는 사용하지 않습니다.
+목록은 이름·전화번호·주소·별점 안내를 표시합니다. 음식점을 선택하면 상세 정보 아래의 **가게 이미지**에서 NAVER API HUB로 검색한 이미지 최대 5개를 가로로 나열합니다. 이미지를 누르면 원본 확대 팝업이 열립니다.
 
 **구현 내용**
 
 - 서버에서 이미지 검색 API 호출 및 키 관리
-- 첫 이미지 검색 결과 사용, `검색 이미지` 표시
-- 화면에 들어온 카드만 요청하며 동시 요청은 최대 2건으로 제한
-- 검색 결과 24시간 메모리 캐시
-- 목록·화면 변경 시 요청 취소
-- 설정 누락·빈 결과·이미지 로드 실패 시 `제공 없음` 표시
+- 지역·가게 이름으로 검색한 썸네일 최대 5개와 원본 확대 보기
+- 선택한 가게만 조회하고 화면·가게 변경 시 요청 취소
+- 검색 결과 10분 메모리 캐시
+- 빈 결과·검색 실패·이미지 로드 실패 안내와 검색 재시도
 
 **관련 Source**
 
-- [js/restaurant-images.js](js/restaurant-images.js)
-- [server/restaurant-images.js](server/restaurant-images.js)
+- [js/naver-images.js](js/naver-images.js)
+- [server/naver-images.js](server/naver-images.js)
+
+이전 Google 이미지 첫 결과 모듈은 보관되어 있으며 현재 화면에서는 사용하지 않습니다.
 
 ### 8. 지역별 관광정보 조회
 
@@ -333,7 +334,7 @@ EnjoyTrip_FrontEnd/
 | 인사이트 | 외부 정보 확인 | 카카오맵 상세 및 네이버·유튜브·구글 검색 링크 |
 | 영상 | 관련 영상 조회·재생 | YouTube 검색, 영상 카드, 재생 대화상자 |
 | 북마크 | 회원별 저장·재조회 | 그룹 생성, 다중 그룹 저장·해제, 비밀번호 재확인 |
-| 이미지 | 음식점 검색 이미지 | Google 이미지 첫 결과 표시, API 설정 필요 |
+| 이미지 | 음식점 검색 이미지 | NAVER API HUB 이미지 최대 5개, 클릭 시 원본 확대 |
 | 반응형 UI | PC·모바일 화면 | 화면 크기에 따른 목록·인사이트·영상 배치 |
 
 ---
@@ -362,6 +363,7 @@ EnjoyTrip_FrontEnd/
 | Kakao Maps JavaScript SDK + Places | 음식점 검색·지도에 필수 | `KAKAO_MAP_JS_KEY` | 코드의 기본 JavaScript 키를 사용한다. 해당 앱의 도메인·권한에 따라 동작 여부가 달라진다. |
 | YouTube Data API v3 | 앱 내 영상 검색에 필요, 선택 기능 | `YOUTUBE_API_KEY` | 영상 검색 오류 안내가 표시된다. 외부 유튜브 검색 링크는 사용할 수 있다. |
 | Google Custom Search JSON API | 이전 이미지 검색 모듈용, 현재 화면에서 사용하지 않음 | `GOOGLE_CUSTOM_SEARCH_API_KEY`, `GOOGLE_CUSTOM_SEARCH_CX` | 현재 음식점 목록에는 사진 영역이 없다. |
+| NAVER API HUB | 가게 이미지 최대 5개 및 확대 보기 | `NCP_NAVER_CLIENT_ID`, `NCP_NAVER_CLIENT_SECRET` | 네이버 클라우드 앱에서 이미지 검색 권한 선택. 서버에서만 인증 정보를 사용한다. |
 | 한국관광공사 TourAPI | 관광정보 실제 모드에 필요, 선택 기능 | `TOUR_API_SERVICE_KEY` | 실제 조회는 사용할 수 없고 샘플 모드는 사용할 수 있다. |
 
 카카오 기본 키는 `js/map-config.js`에 있다. 자신의 카카오 앱 JavaScript 키를 `.env`에 설정해 사용하는 것을 권장한다. 음식점 검색에 별도 Kakao REST 키는 필요하지 않다.
@@ -475,6 +477,7 @@ npm test
 | `tour-api.test.js` | 관광 API 요청 파라미터와 인증·네트워크 오류 |
 | `youtube-api.test.js` | 영상 검색, 응답 정규화, 요청 공유, 캐시, 키 비노출 |
 | `restaurant-images.test.js` | 이미지 첫 결과, 설정·응답 오류, 캐시, 키 비노출 |
+| `naver-images.test.js` | API HUB 이미지 최대 5개, 인증 헤더·안전한 URL·오류·캐시·키 비노출 |
 
 실제 연동은 API 키를 설정한 뒤 지역·메뉴 검색, 영상 재생, 북마크 저장·재조회, 관광정보 실제 모드를 통해 확인할 수 있습니다.
 
