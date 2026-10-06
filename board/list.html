@@ -1,29 +1,35 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE-edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffdf70">
+  <title>이야기 게시판 · 맛집기행</title>
+  <link rel="stylesheet" href="../css/board.css">
+  <script type="module" src="../js/board.js"></script>
 </head>
-<body>
-  <h1>
-    <a href="/index.html">돌아가기</a>
-  </h1>
-  <h2>게시판 리스트</h2>
-  <table border="1">
-    <thead>
-      <tr>
-        <td>번호</td>
-        <td>글제목</td>
-        <td>작성자</td>
-        <td>등록일</td>
-        <td>조회수</td>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-  <a href="./write.html">글쓰기</a>
-  <script scr="../js/list.js"></script>
+<body data-board-page="list">
+  <a class="skip-link" href="#board-main">본문으로 이동</a>
+  <header class="board-header">
+    <a class="board-brand" href="/index.html#home">맛집기행<span>!</span></a>
+    <nav aria-label="메인 메뉴"><a href="/index.html#home">맛집 찾기</a><a href="./list.html" aria-current="page">이야기 게시판</a></nav>
+  </header>
+  <main id="board-main" class="board-shell">
+    <section class="board-intro" aria-labelledby="page-title">
+      <div><span class="board-eyebrow">FOOD & TRAVEL · BOARD</span><h1 id="page-title">맛있는 이야기<span class="title-spark" aria-hidden="true">✦</span></h1><p>발견한 맛집부터 여행의 한 장면까지,<br class="mobile-break"> 당신의 이야기를 남겨보세요.</p></div>
+      <div class="intro-ticket" aria-hidden="true"><span class="ticket-star">✦</span><strong>한 끼의 기억</strong><span>모아두면, 또 하나의 여행</span></div>
+    </section>
+    <p id="board-feedback" class="board-feedback" role="status" aria-live="polite" hidden></p>
+    <section class="board-window" aria-labelledby="list-heading">
+      <div class="board-titlebar"><span id="list-heading">이야기 게시판</span><span aria-hidden="true">▪ ▪ ▪</span></div>
+      <div class="board-toolbar"><p>전체 이야기 <strong id="post-total">0</strong><span id="search-count" hidden></span></p><a href="./write.html" class="board-button primary"><span aria-hidden="true">＋</span> 이야기 쓰기</a></div>
+      <form id="board-search-form" class="board-search" role="search"><label for="board-query">이야기 찾기</label><div class="search-control"><input id="board-query" name="query" type="search" maxlength="120" placeholder="제목, 내용, 작성자로 검색"><button class="board-button small" type="submit">검색</button></div></form>
+      <div class="board-table-wrap"><table class="board-table"><caption class="sr-only">게시글 번호, 제목, 작성자, 등록일, 조회수</caption><thead><tr><th scope="col" class="post-number">번호</th><th scope="col">제목</th><th scope="col" class="post-writer">작성자</th><th scope="col" class="post-date">등록일</th><th scope="col" class="post-views">조회</th></tr></thead><tbody id="board-list"></tbody></table></div>
+      <div id="board-empty" class="board-empty" hidden><span class="empty-icon" aria-hidden="true">✎</span><h2 id="empty-title">첫 번째 이야기를 기다리고 있어요.</h2><p id="empty-description">기억에 남은 한 끼, 짧은 이야기로 시작해 보세요.</p><a id="empty-write" href="./write.html" class="board-button">이야기 쓰기</a><button id="clear-search" type="button" class="board-button" hidden>전체 이야기 보기</button></div>
+      <nav id="board-pagination" class="board-pagination" aria-label="게시글 페이지" hidden><button id="board-previous" type="button" class="board-button small">← 이전</button><span id="board-page-label" aria-live="polite">1 / 1</span><button id="board-next" type="button" class="board-button small">다음 →</button></nav>
+      <div class="board-window-footer"><span>좋았던 한 끼를 오래 기억하는 방법.</span><span aria-hidden="true">FOOD & TRAVEL</span></div>
+    </section>
+  </main>
+  <footer class="board-footer"><a href="/index.html#home">© 2026 맛집기행</a><span>이야기는 현재 브라우저에 저장됩니다.</span></footer>
 </body>
 </html>

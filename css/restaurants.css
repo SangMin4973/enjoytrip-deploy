@@ -58,19 +58,14 @@ body.workspace-screen { padding: 0; overflow: hidden; background: var(--food-yel
 .restaurant-card { position: relative; border-bottom: 1px solid #e7d5ad; background: #fff9df; transition: background .1s; }
 .restaurant-card.selected { background: #fff0ba; box-shadow: inset 4px 0 0 var(--food-red); }
 .restaurant-card:hover { background: #fff3c3; }
-.restaurant-card-content { display: flex; align-items: flex-start; gap: 13px; width: 100%; padding: 19px 15px; text-align: left; border: 0; background: transparent; color: inherit; }
-.restaurant-photo { display: block; width: 102px; height: 109px; object-fit: cover; image-rendering: pixelated; border: 2px solid #e0bd7f; background: #ffe9a1; flex-shrink: 0; }
-.photo-unavailable { display: flex; align-items: center; justify-content: center; white-space: pre-line; text-align: center; color: #997044; font-size: 11px; line-height: 1.8; }
-.photo-search { position: relative; overflow: hidden; }
-.photo-search img { width: 100%; height: 100%; object-fit: cover; image-rendering: auto; }
-.photo-search span { position: absolute; bottom: 0; left: 0; right: 0; background: #fff8dcde; color: #774921; text-align: center; font-size: 10px; line-height: 1.6; }
+.restaurant-card-content { display: block; width: 100%; padding: 19px 15px; text-align: left; border: 0; background: transparent; color: inherit; }
 .results-notice { flex-shrink: 0; margin: 0; padding: 9px 12px; font-size: 10px; line-height: 1.7; color: #997044; border-top: 1px dashed var(--food-line); }
 .search-pagination { display: flex; align-items: center; justify-content: space-between; gap: 9px; padding: 9px 10px; flex-shrink: 0; }
 .search-pagination .food-button { padding: 5px 9px; font-size: 10px; }
 .search-pagination span { font-size: 9px; line-height: 1.8; text-align: center; }
 .source-caption { margin: 13px 0; font-size: 11px; line-height: 1.9; color: #997044; }
 .bookmark-name-submit { margin-top: 22px; }
-.restaurant-card-text { flex: 1; min-width: 0; padding-top: 1px; }
+.restaurant-card-text { min-width: 0; }
 .restaurant-card h3 { font-size: 15px; line-height: 1.6; font-weight: 700; color: #8e3824; margin: 0 24px 6px 0; overflow-wrap: anywhere; }
 .restaurant-card p { font-size: 10px; line-height: 1.8; color: #9c7950; margin: 0 0 2px; }
 .restaurant-card .restaurant-rating { color: #af5e28; font-size: 11px; margin-top: 5px; }
@@ -390,14 +385,14 @@ body.workspace-screen { padding: 0; overflow: hidden; background: var(--food-yel
 @keyframes insight-slide { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: translateX(0); } }
 @media (max-width: 1100px) and (min-width: 761px) {
   .restaurant-list-panel { width: 317px; }
-  .restaurant-photo { width: 85px; height: 101px; }
-  .restaurant-card-content { gap: 11px; padding: 18px 12px; }
+  .restaurant-card-content { padding: 18px 12px; }
   .insight-panel { left: 348px; width: 337px; }
   .insight-scroll { padding: 20px 18px; }
   .explore-page[data-view=results] .explore-map-stage { left: 350px; }
   .explore-page[data-view=results].insights-open .explore-map-stage { left: 701px; }
 }
 @media (max-width: 760px) {
+<<<<<<< HEAD
   .my-summary {
     margin-bottom: 28px;
   }
@@ -412,6 +407,9 @@ body.workspace-screen { padding: 0; overflow: hidden; background: var(--food-yel
   .summary-item strong {
     font-size: 21px;
   }
+=======
+  .source-badge { display: none; }
+>>>>>>> dbbe2ecbc832dd9f4d14cc9e9fd924446b6f44d8
   .explore-header { height: 67px; padding: 0 16px; gap: 9px; }
   .explore-brand { font-size: 22px; letter-spacing: 0; }
   .source-badge { padding: 3px 5px; font-size: 8px; }
@@ -428,8 +426,7 @@ body.workspace-screen { padding: 0; overflow: hidden; background: var(--food-yel
   .restaurant-list-panel { left: 12px; right: 12px; top: auto; bottom: 13px; width: auto; height: min(65svh,580px); }
   .result-heading { padding: 15px 17px 13px; }
   .result-heading h2 { font-size: 20px; margin: 6px 0; }
-  .restaurant-photo { width: 93px; height: 104px; }
-  .restaurant-card-content { gap: 14px; padding: 15px; }
+  .restaurant-card-content { padding: 15px; }
   .restaurant-card h3 { font-size: 14px; }
   .restaurant-card p { font-size: 10px; }
   .insight-panel { left: 12px; right: 12px; top: 13px; bottom: 13px; width: auto; z-index: 4; }

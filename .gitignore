@@ -1,6 +1,30 @@
+# Local credentials
 01_api/js/keys.js
 .env
 .env.*
 !.env.example
+
+# Dependencies and generated files
 node_modules/
+coverage/
+.nyc_output/
+.cache/
+
+# Temporary files and logs
 tmp/
+temp/
+*.log
+*.tmp
+*.bak
+
+# Local editor settings and recovery files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini

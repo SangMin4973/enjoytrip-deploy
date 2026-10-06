@@ -1,26 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-  </head>
-  <body>
-    <h1>
-      <a haref="index.html">돌아가기</a>
-    </h1>
-    <h2>작성한 게시글</h2>
-
-    <form id="viewFrm">
-      <div id="subject">제묵 :</div>
-      <div id="writer">작성자 :</div>
-      <div id="date">작성일 :</div>
-      <div id="content">내용 :</div>
-    </form>
-    <button id="modify">수정</button>
-    <a href="./list.html">뒤로 가기</a>
-    <button id="delete">삭제</button>
-    <script src="../js/write.js"></script>
-  </body>
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffdf70">
+  <title>이야기 읽기 · 맛집기행</title>
+  <link rel="stylesheet" href="../css/board.css">
+  <script type="module" src="../js/board.js"></script>
+</head>
+<body data-board-page="view">
+  <a class="skip-link" href="#board-main">본문으로 이동</a>
+  <header class="board-header"><a class="board-brand" href="/index.html#home">맛집기행<span>!</span></a><nav aria-label="메인 메뉴"><a href="/index.html#home">맛집 찾기</a><a href="./list.html">이야기 게시판</a></nav></header>
+  <main id="board-main" class="board-shell reader-shell">
+    <a class="board-back" href="./list.html">← 이야기 게시판</a>
+    <section class="board-intro compact" aria-labelledby="page-title"><div><span class="board-eyebrow">A LITTLE FOOD STORY</span><h1 id="page-title">한 끼의 기록<span class="title-spark" aria-hidden="true">✦</span></h1><p>맛있는 순간을 천천히 읽어보세요.</p></div></section>
+    <p id="board-feedback" class="board-feedback" role="status" aria-live="polite" hidden></p>
+    <section class="board-window" aria-label="게시글 상세"><div class="board-titlebar"><span>이야기 게시판</span><span aria-hidden="true">▪ ▪ ▪</span></div>
+      <article id="viewFrm" class="board-article" hidden><header class="article-heading"><span id="post-label" class="article-label"></span><h2 id="subject"></h2><dl class="article-meta"><div><dt>작성자</dt><dd id="writer"></dd></div><div><dt>등록일</dt><dd><time id="date"></time></dd></div><div><dt>조회</dt><dd id="views"></dd></div></dl></header><div id="content" class="article-content"></div><div class="article-signoff"><span aria-hidden="true">✦</span> 한 끼의 기억이 또 하나의 여행이 됩니다.</div></article>
+      <div class="reader-actions"><a href="./list.html" class="board-button">← 목록으로</a><div id="post-actions" hidden><a id="modify" href="./modify.html" class="board-button">수정하기</a><button id="delete" type="button" class="board-button danger">삭제</button></div></div>
+    </section>
+  </main>
+  <footer class="board-footer"><a href="/index.html#home">© 2026 맛집기행</a><span>이야기는 현재 브라우저에 저장됩니다.</span></footer>
+  <dialog id="delete-dialog" class="board-dialog" aria-labelledby="delete-title"><div class="board-titlebar"><span>이야기 삭제</span><button id="cancel-delete-icon" type="button" aria-label="삭제 취소">×</button></div><div class="dialog-body"><h2 id="delete-title">이 이야기를 삭제할까요?</h2><p>삭제한 글은 되돌릴 수 없습니다.</p><p id="delete-feedback" class="board-feedback" role="alert" hidden></p><div class="dialog-actions"><button id="cancel-delete" type="button" class="board-button">취소</button><button id="confirm-delete" type="button" class="board-button primary">삭제하기</button></div></div></dialog>
+</body>
 </html>
