@@ -1,6 +1,8 @@
 import { currentUser, initializeSharedAuth } from './auth.js';
 import { sharedRequest } from './shared-client.js';
 import { initializeContextEditor, renderPostContext, postSummary, kindLabel, node } from './board-context.js';
+import { restoreGoogleRestaurants } from './google-places.js';
+import { loadBookmarks } from './restaurant-store.js';
 
 const $ = selector => document.querySelector(selector);
 const page = document.body.dataset.boardPage;
@@ -67,6 +69,10 @@ async function initializeEditor() {
     $('#back').href = urlFor('view', post.index);
   }
   form.elements.writer.value = user.name; form.elements.writer.readOnly = true;
+  const params = new URLSearchParams(location.search), selectedBookmark = loadBookmarks(user.id).find(item => item.id === params.get('bookmark'));
+  const restored = await restoreGoogleRestaurants([params.get('restaurant'), post?.restaurant?.id,
+    ...(post?.bookmark?.restaurants || []).map(item => item.id), ...(selectedBookmark?.restaurantIds || [])]);
+  if (restored.failures.length) feedback('일부 Google 장소 정보를 불러오지 못했어요. 다시 검색한 뒤 작성해 주세요.', true);
   const context = initializeContextEditor($('#post-context-editor'), user, post);
   form.hidden = false;
   function count() { $('#content-count').textContent = `${form.elements.content.value.length.toLocaleString('ko-KR')} / 10,000`; }

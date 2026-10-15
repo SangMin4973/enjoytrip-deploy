@@ -4,6 +4,8 @@ function text(value, label, max) {
   return value.trim();
 }
 function restaurant(value) {
+  // Google 제공 장소 정보는 게시글에 복제하지 않고 장소 ID만 참조합니다.
+  if (value && /^google-[A-Za-z0-9_-]{1,256}$/.test(value.id)) return { id: value.id, name: 'Google Maps 장소', address: '' };
   if (!value || !/^kakao-\d+$/.test(value.id)) throw boardError('실제 음식점을 선택해 주세요.');
   return { id: value.id, name: text(value.name, '가게 이름', 200), address: String(value.address || '').slice(0, 300) };
 }

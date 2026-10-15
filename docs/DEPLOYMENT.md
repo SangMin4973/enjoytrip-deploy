@@ -53,6 +53,7 @@ Blueprint에 새 키를 `sync: false`로 추가해도 기존 서비스에 입력
 | `HOST` | `0.0.0.0` — Render 프록시의 접속 허용 |
 | `KAKAO_MAP_JS_KEY` | 본인 카카오 앱의 JavaScript 키 — 지도·음식점 검색 |
 | `YOUTUBE_API_KEY` | 선택: 앱 내 관련 영상 검색 |
+| `GOOGLE_PLACES_API_KEY` | Google Places API(New) 검색·상세·사진용 서버 전용 키 |
 | `NCP_NAVER_CLIENT_ID` | NAVER API HUB Client ID — 가게 이미지 검색 |
 | `NCP_NAVER_CLIENT_SECRET` | NAVER API HUB Client Secret — 서버에서만 사용 |
 | `SUPABASE_URL` | 공유 게시판·서버 로그인 DB의 프로젝트 URL |
@@ -60,6 +61,8 @@ Blueprint에 새 키를 `sync: false`로 추가해도 기존 서비스에 입력
 | `TOUR_API_SERVICE_KEY` | 선택: 실제 관광정보 조회 |
 
 `PORT`는 Render가 제공하는 값을 사용합니다. 로컬 `.env`의 `PORT=5179`를 배포 환경에 복사할 필요가 없습니다. 현재 사용하지 않는 Google 이미지 검색 키도 첫 배포에 필요하지 않습니다.
+
+2026-10-15부터 새 음식점 검색·사진·별점에는 Places API(New)를 사용합니다. Google Cloud 프로젝트에서 해당 API와 결제 설정을 활성화하고 `GOOGLE_PLACES_API_KEY`를 서버에 등록합니다. 키를 브라우저 또는 Git에 넣지 않습니다. 기존 YouTube 키를 대체하지 않습니다. 아래 네이버 이미지 설명은 기존 카카오 북마크 호환 경로에 해당합니다. 지도는 사용자 선택에 따라 카카오 SDK를 유지하므로, 일반 Places API의 비Google 지도 병용 제한은 별도로 검토해야 합니다.
 
 가게 이미지에는 NAVER API HUB의 `https://naverapihub.apigw.ntruss.com/search/v1/image`를 사용합니다. 애플리케이션에서 이미지 검색 권한을 선택하고 위 두 값을 Render Environment에 추가합니다. 네이버 개발자센터의 `X-Naver-Client-Id` 방식과 다른 인증 방식이므로 API HUB 키를 사용합니다. 서버가 지역·가게 이름으로 최대 5개를 요청하며, 가게 목록의 이름 아래 썸네일을 눌러 확대할 수 있습니다. 화면에 보이는 가게부터 최대 2건씩 조회하고 동일 검색은 서버 메모리에 10분간 캐시합니다.
 

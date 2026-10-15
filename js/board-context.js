@@ -1,4 +1,6 @@
 import { loadRestaurants, loadBookmarks } from './restaurant-store.js';
+import { getGoogleRestaurant } from './google-places.js';
+import { currentUser } from './auth.js';
 
 export function node(tag, className, text) {
   const element = document.createElement(tag);
@@ -27,7 +29,17 @@ export function postSummary(post) {
 
 function placeCard(restaurant) {
   const card = node('div', 'shared-restaurant');
-  card.append(node('strong', '', restaurant.name), node('p', '', restaurant.address || '주소 미등록'));
+  const name = node('strong', '', restaurant.name), address = node('p', '', restaurant.address || '주소 미등록');
+  card.append(name, address);
+  if (/^google-[A-Za-z0-9_-]{1,256}$/.test(restaurant.id)) {
+    const link = node('a', '', 'Google Maps에서 가게 보기 ↗');
+    link.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('음식점')}&query_place_id=${encodeURIComponent(restaurant.id.slice(7))}`;
+    link.target = '_blank'; link.rel = 'noopener noreferrer'; card.append(link);
+    if (currentUser()) getGoogleRestaurant(restaurant.id).then(place => {
+      name.textContent = place.name; address.textContent = place.address; link.href = place.placeUrl;
+      card.append(node('p', '', 'Google Maps'));
+    }).catch(() => { address.textContent = '현재 장소 정보는 Google Maps에서 확인해 주세요.'; });
+  }
   if (/^kakao-\d+$/.test(restaurant.id)) {
     const link = node('a', '', '카카오맵에서 가게 보기 ↗');
     link.href = `https://place.map.kakao.com/${restaurant.id.slice(6)}`;
@@ -66,7 +78,7 @@ export function initializeContextEditor(container, user, post = null) {
   const restaurant = selectField('post-restaurant', '후기를 남길 음식점');
   option(restaurant, '', '검색하거나 북마크에 담은 음식점을 선택해 주세요');
   const candidates = new Map(catalog.map(item => [item.id, item]));
-  if (post?.restaurant) candidates.set(post.restaurant.id, post.restaurant);
+  if (post?.restaurant && !candidates.has(post.restaurant.id)) candidates.set(post.restaurant.id, post.restaurant);
   candidates.forEach(item => option(restaurant, item.id, `${item.name} · ${item.address}`));
   const hint = node('p', 'context-hint', '원하는 가게가 없으면 맛집 찾기에서 먼저 검색해 주세요.');
   const search = node('a', 'board-button small', '맛집 찾기 →'); search.href = '/index.html#home';

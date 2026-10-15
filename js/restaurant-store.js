@@ -1,14 +1,16 @@
 import { readStorage, writeStorage } from './storage.js';
+const googleRestaurants = new Map();
 
 // 실제 장소 정보를 따로 저장합니다. 이전 예시 카탈로그와 회원별 북마크는 보존합니다.
 export function loadRestaurants() {
   const existing = readStorage('kakaoRestaurantCatalog', []);
   if (!Array.isArray(existing)) throw new Error('음식점 저장 데이터의 형식이 올바르지 않습니다.');
-  return existing.filter(item => item?.source === 'kakao' && /^kakao-\d+$/.test(item.id));
+  return [...existing.filter(item => item?.source === 'kakao' && /^kakao-\d+$/.test(item.id)), ...googleRestaurants.values()];
 }
 
 export function saveRestaurants(restaurants) {
-  const catalog = new Map(loadRestaurants().map(item => [item.id, item]));
+  restaurants.forEach(item => { if (item?.source === 'google' && /^google-[A-Za-z0-9_-]{1,256}$/.test(item.id)) googleRestaurants.set(item.id, item); });
+  const catalog = new Map(loadRestaurants().filter(item => item.source === 'kakao').map(item => [item.id, item]));
   restaurants.forEach(item => { if (item.source === 'kakao') catalog.set(item.id, item); });
   writeStorage('kakaoRestaurantCatalog', [...catalog.values()]);
 }

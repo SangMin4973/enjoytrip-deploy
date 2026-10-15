@@ -10,6 +10,7 @@ import { createNaverImageSearch } from './server/naver-images.js';
 import { createSharedDb } from './server/shared-db.js';
 import { createSharedAuth } from './server/shared-auth.js';
 import { createSharedBoard } from './server/shared-board.js';
+import { createGooglePlaces } from './server/google-places.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 if (existsSync(path.join(root, '.env'))) process.loadEnvFile(path.join(root, '.env'));
@@ -28,11 +29,12 @@ async function bodyJson(request) {
   catch { throw Object.assign(new Error('요청 내용이 올바르지 않습니다.'), { status: 400 }); }
 }
 
-export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions = {}, naverImageOptions = {}, sharedDbOptions = {} } = {}) {
+export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions = {}, naverImageOptions = {}, sharedDbOptions = {}, googlePlacesOptions = {} } = {}) {
   const db = createSharedDb(sharedDbOptions), auth = createSharedAuth(db), board = createSharedBoard(db, auth);
   const searchYoutube = createYoutubeSearch(youtubeOptions);
   const searchImage = createRestaurantImageSearch(imageOptions);
   const searchNaverImages = createNaverImageSearch(naverImageOptions);
+  const googlePlaces = createGooglePlaces(googlePlacesOptions);
   return createServer(async (request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     try {
@@ -58,9 +60,24 @@ export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions
         return;
       }
       if (url.pathname === '/api/config') {
-        json(response, 200, { sharedBoardConfigured: db.configured, tourApiConfigured: !!process.env.TOUR_API_SERVICE_KEY?.trim(), kakaoMapJsKey: process.env.KAKAO_MAP_JS_KEY || '',
+        json(response, 200, { sharedBoardConfigured: db.configured, googlePlacesConfigured: googlePlaces.configured, tourApiConfigured: !!process.env.TOUR_API_SERVICE_KEY?.trim(), kakaoMapJsKey: process.env.KAKAO_MAP_JS_KEY || '',
           restaurantImagesConfigured: !!(process.env.GOOGLE_CUSTOM_SEARCH_API_KEY?.trim() && process.env.GOOGLE_CUSTOM_SEARCH_CX?.trim()) });
         return;
+      }
+      if (url.pathname.startsWith('/api/google/places/')) {
+        if (url.pathname === '/api/google/places/photo') {
+          const image = await googlePlaces.photo(url.searchParams);
+          response.writeHead(200, { 'Content-Type': image.contentType, 'Cache-Control': 'no-store' });
+          response.end(request.method === 'HEAD' ? undefined : image.data);
+          return;
+        }
+        await auth.requireUser(request);
+        if (url.pathname === '/api/google/places/search') {
+          json(response, 200, await googlePlaces.search(url.searchParams.get('q'), url.searchParams.get('pageToken') || '')); return;
+        }
+        const placeId = /^\/api\/google\/places\/([A-Za-z0-9_-]{1,256})$/.exec(url.pathname)?.[1];
+        if (placeId) { json(response, 200, await googlePlaces.details(placeId)); return; }
+        json(response, 404, { error: '없는 Google 장소 API입니다.' }); return;
       }
       if (url.pathname.startsWith('/api/tour/')) {
         const result = await tourRoute(url.pathname, url.searchParams, tourOptions);
@@ -92,7 +109,7 @@ export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions
     } catch (error) {
       json(response, error.code === 'ENOENT' ? 404 : error.status || 400, {
         error: error.code === 'ENOENT' ? '파일을 찾을 수 없습니다.' : error.message,
-        ...(['TourApiError', 'YoutubeApiError', 'ImageSearchError', 'NaverImageError'].includes(error.name) ? { code: error.code } : {}),
+        ...(['TourApiError', 'YoutubeApiError', 'ImageSearchError', 'NaverImageError', 'GooglePlacesError'].includes(error.name) ? { code: error.code } : {}),
       });
     }
   });

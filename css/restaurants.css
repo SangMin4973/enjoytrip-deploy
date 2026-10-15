@@ -70,6 +70,10 @@ body.workspace-screen { padding: 0; overflow: hidden; background: var(--food-yel
 .search-pagination span { font-size: 9px; line-height: 1.8; text-align: center; }
 .source-caption { margin: 13px 0; font-size: 11px; line-height: 1.9; color: #997044; }
 .restaurant-image-list { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 5px; }
+.restaurant-image-tile { min-width: 0; }
+.restaurant-image-tile .restaurant-image-card { width: 100%; }
+.restaurant-image-credit { margin-top: 3px; font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.google-attribution, .restaurant-card p.google-attribution { font-family: Arial, sans-serif; font-size: 12px; font-weight: 400; color: #5e5e5e; text-transform: none; letter-spacing: normal; }
 .restaurant-image-card { min-width: 0; aspect-ratio: 1; overflow: hidden; padding: 0; border: 1px solid #cfb187; background: var(--food-paper); color: var(--food-deep); font-size: 9px; }
 .restaurant-image-card img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .restaurant-image-placeholder { display: block; aspect-ratio: 1; background: #e8d9b5; border: 1px solid #d6c39b; }
