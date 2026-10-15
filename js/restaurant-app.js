@@ -1,6 +1,6 @@
 import * as auth from './auth.js';
 import * as store from './restaurant-store.js';
-import { searchGoogleRestaurants, restoreGoogleRestaurants, ratingText } from './google-places.js';
+import { collectGoogleRestaurants, restaurantPage, MAX_SEARCH_PAGES, restoreGoogleRestaurants, ratingText } from './google-places.js';
 import { loadKakaoSdk } from './kakao-sdk.js';
 import { LOGIN_MAP_CONFIG } from './map-config.js';
 import { searchYoutubeVideos } from './youtube-api.js';
@@ -26,7 +26,6 @@ export function initRestaurantApp() {
   let revision = 0, toastTimer, resizeTimer, bookmarkRestaurantId, confirmTarget = 'bookmarks';
   let videoRevision = 0, videoController, shownVideos = [];
   const imageGallery = initRestaurantGallery();
-  let searchQuery = '', pageTokens = new Map([[1, '']]);
 
   function toast(message) {
     const box = $('#explore-toast'); box.textContent = message; box.hidden = !message;
@@ -84,6 +83,7 @@ export function initRestaurantApp() {
     const list = $('#restaurant-list'), scrollTop = list.scrollTop;
     list.replaceChildren();
     let missing = 0;
+    const pageResult = restaurantPage(searchResult?.restaurants || [], view.page);
     if (view.source === 'bookmark') {
       const bookmark = store.loadBookmarks(member().id).find(item => item.id === view.bookmarkId);
       $('#results-source').textContent = '내 북마크';
@@ -93,15 +93,15 @@ export function initRestaurantApp() {
     } else {
       $('#results-source').textContent = '검색한 맛집';
       $('#results-heading').textContent = [view.region, view.menu].filter(Boolean).join(' · ') || '맛집 찾기';
-      visibleRestaurants = searching || searchError ? [] : (searchResult?.restaurants || []);
+      visibleRestaurants = searching || searchError ? [] : pageResult.restaurants;
     }
-    $('#results-count').textContent = searching ? 'Google Maps에서 음식점을 찾는 중…' : searchError ? '검색 연결 오류' : `음식점 ${visibleRestaurants.length}곳 · ${view.source === 'bookmark' ? '내 북마크 장소 정보' : 'Google Maps 검색 결과'}`;
-    $('#results-notice').textContent = missing ? `정보를 불러오지 못한 음식점 ${missing}곳은 표시하지 않습니다. 기존 북마크는 보존됩니다.` : view.source === 'bookmark' ? 'Google 장소는 현재 조회 정보이며, 기존 카카오 장소는 저장 당시 정보입니다.' : 'Google Maps 검색 순서입니다. 별점과 평가 수는 Google에서 제공됩니다.';
+    $('#results-count').textContent = searching ? 'Google Maps 검색 결과를 모으는 중…' : searchError ? '검색 연결 오류' : view.source === 'bookmark' ? `음식점 ${visibleRestaurants.length}곳 · 내 북마크 장소 정보` : `검색 결과 총 ${pageResult.total}곳 · 현재 ${visibleRestaurants.length}곳 표시`;
+    $('#results-notice').textContent = missing ? `정보를 불러오지 못한 음식점 ${missing}곳은 표시하지 않습니다. 기존 북마크는 보존됩니다.` : view.source === 'bookmark' ? 'Google 장소는 현재 조회 정보이며, 기존 카카오 장소는 저장 당시 정보입니다.' : `Google 검색 결과를 최대 3페이지·45곳까지 모아 15곳씩 표시합니다.${searchResult?.truncated ? ' 추가 결과가 있을 수 있습니다.' : ''} Google Maps 검색 순서를 유지합니다.`;
     $('#restaurant-list').setAttribute('aria-busy', String(searching));
     $('#search-pagination').hidden = view.source === 'bookmark' || searching || !!searchError || !searchResult?.restaurants.length;
-    $('#search-page-label').textContent = `${view.page || 1}페이지 · 음식점 ${visibleRestaurants.length}곳`;
-    $('#previous-restaurants').disabled = (view.page || 1) <= 1;
-    $('#next-restaurants').disabled = !searchResult?.hasNext;
+    $('#search-page-label').textContent = `${pageResult.page} / ${pageResult.totalPages}페이지 · 총 ${pageResult.total}곳`;
+    $('#previous-restaurants').disabled = searching || !!searchError || !pageResult.hasPrevious;
+    $('#next-restaurants').disabled = searching || !!searchError || !pageResult.hasNext;
     if (!visibleRestaurants.length) {
       const empty = element('div', 'list-empty');
       empty.append(element('strong', '', searching ? '음식점을 찾고 있어요.' : searchError ? '검색을 완료하지 못했어요.' : view.source === 'bookmark' ? '표시할 맛집이 없어요.' : '찾는 맛집이 없어요.'), element('p', '', searching ? '잠시만 기다려 주세요.' : searchError || (view.source === 'bookmark' ? '실제 음식점을 검색하고 별표를 눌러 담아보세요.' : '지역을 더 구체적으로 입력하거나 메뉴를 바꿔보세요.')));
@@ -360,28 +360,23 @@ export function initRestaurantApp() {
     } catch (error) { toast(error.message); }
   }
 
-  // 페이지 이동·로그아웃 뒤 도착한 응답이 현재 화면을 덮어쓰지 않게 합니다.
+  // 새 검색·화면 이동·로그아웃 뒤에는 남은 페이지를 요청하거나 결과를 반영하지 않습니다.
   async function runSearch() {
     const requestRevision = ++revision, userId = member().id;
     const requestView = { ...view, page: view.page || 1 };
     searching = true; searchError = ''; searchResult = null;
     renderList(); renderInsights(); renderMarkers();
     try {
-      const query = `${requestView.region}\n${requestView.menu}`;
-      if (query !== searchQuery) { searchQuery = query; pageTokens = new Map([[1, '']]); }
-      // Google 페이지 토큰은 검색 상태에만 보관합니다. 새로고침한 페이지는 앞 페이지부터 토큰을 다시 받습니다.
-      let result;
-      for (let page = 1; page <= requestView.page; page++) {
-        if (page !== requestView.page && pageTokens.has(page + 1)) continue;
-        if (!pageTokens.has(page)) throw new Error('다음 검색 결과가 없습니다. 첫 페이지에서 다시 검색해 주세요.');
-        result = await searchGoogleRestaurants(requestView.region, requestView.menu, pageTokens.get(page));
-        if (!active || revision !== requestRevision || auth.currentUser()?.id !== userId) return;
-        if (result.nextPageToken && page < 3) pageTokens.set(page + 1, result.nextPageToken);
-        else pageTokens.delete(page + 1);
-      }
-      result.hasNext = !!result.nextPageToken && requestView.page < 3;
-      if (!active || route !== 'results' || revision !== requestRevision || auth.currentUser()?.id !== userId) return;
+      const isCurrent = () => active && route === 'results' && revision === requestRevision && auth.currentUser()?.id === userId;
+      const result = await collectGoogleRestaurants(requestView.region, requestView.menu, {
+        isCurrent,
+        onProgress: ({ pagesFetched, count }) => {
+          $('#results-count').textContent = `Google Maps 검색 결과를 모으는 중… ${pagesFetched} / ${MAX_SEARCH_PAGES}페이지 · ${count}곳`;
+        },
+      });
+      if (!isCurrent()) return;
       store.saveRestaurants(result.restaurants); restaurants = store.loadRestaurants();
+      requestView.page = restaurantPage(result.restaurants, requestView.page).page;
       searchResult = result; view = requestView; store.saveView(view);
     } catch (error) {
       if (!active || revision !== requestRevision || auth.currentUser()?.id !== userId) return;
@@ -394,10 +389,13 @@ export function initRestaurantApp() {
   }
 
   async function changeSearchPage(delta) {
-    if (searching || view.source !== 'search') return;
-    view.page = Math.max(1, Math.min(3, (view.page || 1) + delta)); view.selectedId = null;
+    member();
+    if (searching || searchError || !searchResult || view.source !== 'search') return;
+    const nextPage = restaurantPage(searchResult.restaurants, (view.page || 1) + delta).page;
+    if (nextPage === (view.page || 1)) return;
+    view.page = nextPage; view.selectedId = null; store.saveView(view);
     $('#restaurant-list').scrollTop = 0;
-    await runSearch();
+    renderList(); renderInsights(); renderMarkers();
   }
   $('#previous-restaurants').addEventListener('click', () => changeSearchPage(-1).catch(error => toast(error.message)));
   $('#next-restaurants').addEventListener('click', () => changeSearchPage(1).catch(error => toast(error.message)));
