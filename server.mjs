@@ -11,6 +11,7 @@ import { createSharedDb } from './server/shared-db.js';
 import { createSharedAuth } from './server/shared-auth.js';
 import { createSharedBoard } from './server/shared-board.js';
 import { createGooglePlaces } from './server/google-places.js';
+import { createRestaurantRanking } from './server/restaurant-ranking.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 if (existsSync(path.join(root, '.env'))) process.loadEnvFile(path.join(root, '.env'));
@@ -29,16 +30,31 @@ async function bodyJson(request) {
   catch { throw Object.assign(new Error('요청 내용이 올바르지 않습니다.'), { status: 400 }); }
 }
 
-export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions = {}, naverImageOptions = {}, sharedDbOptions = {}, googlePlacesOptions = {} } = {}) {
+export function makeServer({ tourOptions = {}, youtubeOptions = {}, imageOptions = {}, naverImageOptions = {}, sharedDbOptions = {}, googlePlacesOptions = {}, rankingOptions = {} } = {}) {
   const db = createSharedDb(sharedDbOptions), auth = createSharedAuth(db), board = createSharedBoard(db, auth);
   const searchYoutube = createYoutubeSearch(youtubeOptions);
   const searchImage = createRestaurantImageSearch(imageOptions);
   const searchNaverImages = createNaverImageSearch(naverImageOptions);
   const googlePlaces = createGooglePlaces(googlePlacesOptions);
+  const rankRestaurants = createRestaurantRanking(rankingOptions);
   return createServer(async (request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     try {
       const url = new URL(request.url, 'http://localhost');
+      if (url.pathname === '/api/restaurants/rank') {
+        if (request.method !== 'POST') { json(response, 405, { error: '지원하지 않는 요청입니다.' }); return; }
+        let origin; try { origin = new URL(request.headers.origin); } catch { /* 동일 출처 확인 */ }
+        if (!origin || !['http:', 'https:'].includes(origin.protocol) || origin.host !== request.headers.host || request.headers['sec-fetch-site'] === 'cross-site') {
+          json(response, 403, { error: '같은 사이트에서만 정렬을 요청할 수 있습니다.' }); return;
+        }
+        await auth.requireUser(request);
+        const input = await bodyJson(request), controller = new AbortController();
+        const disconnected = () => { if (!response.writableEnded) controller.abort(); };
+        response.once('close', disconnected);
+        try { json(response, 200, await rankRestaurants(input, { signal: controller.signal })); }
+        finally { response.removeListener('close', disconnected); }
+        return;
+      }
       if (url.pathname.startsWith('/api/auth/') || url.pathname.startsWith('/api/board/')) {
         if (!db.configured) { json(response, 503, { error: '공유 DB를 연결하는 중입니다. 잠시 후 이용해 주세요.' }); return; }
         if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) { json(response, 405, { error: '지원하지 않는 요청입니다.' }); return; }

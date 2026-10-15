@@ -68,6 +68,13 @@ body.workspace-screen { padding: 0; overflow: hidden; background: var(--food-yel
 .result-heading #results-search-feedback { margin-top: 10px; color: var(--food-deep); }
 .results-search-form button:focus-visible, .results-search-fields input:focus-visible { outline: 2px solid var(--food-red); outline-offset: 2px; }
 .result-heading { flex-shrink: 0; }
+.restaurant-sort-controls { margin-top: 10px; }
+.restaurant-sort-controls label { display: block; margin-bottom: 5px; color: var(--food-deep); font-size: 11px; }
+.restaurant-sort-controls select { width: 100%; min-height: 36px; border: 1px solid #c38c4b; background: #fffdf2; color: var(--food-deep); font: inherit; font-size: 12px; padding: 5px; }
+.restaurant-sort-controls select:focus-visible { outline: 2px solid var(--food-red); outline-offset: 2px; }
+.restaurant-sort-controls select:disabled { background: #eee5d1; color: #726954; cursor: default; }
+.result-heading #restaurant-sort-feedback { margin-top: 6px; line-height: 1.5; }
+.restaurant-score { color: #9c3525; font-size: 11px; }
 .restaurant-list { flex: 1; overflow-y: auto; min-height: 0; overscroll-behavior: contain; padding: 8px 0; }
 .restaurant-card { position: relative; border-bottom: 1px solid #e7d5ad; background: #fff9df; transition: background .1s; }
 .restaurant-card.selected { background: #fff0ba; box-shadow: inset 4px 0 0 var(--food-red); }
@@ -429,7 +436,6 @@ body.workspace-screen { padding: 0; overflow: hidden; background: var(--food-yel
   .explore-page[data-view=results].insights-open .explore-map-stage { left: 701px; }
 }
 @media (max-width: 760px) {
-<<<<<<< HEAD
   .my-summary {
     margin-bottom: 28px;
   }
@@ -444,9 +450,7 @@ body.workspace-screen { padding: 0; overflow: hidden; background: var(--food-yel
   .summary-item strong {
     font-size: 21px;
   }
-=======
   .source-badge { display: none; }
->>>>>>> dbbe2ecbc832dd9f4d14cc9e9fd924446b6f44d8
   .explore-header { height: 67px; padding: 0 16px; gap: 9px; }
   .explore-brand { font-size: 22px; letter-spacing: 0; }
   .source-badge { padding: 3px 5px; font-size: 8px; }
@@ -460,8 +464,10 @@ body.workspace-screen { padding: 0; overflow: hidden; background: var(--food-yel
   .restaurant-search-form { padding: 25px 23px; }
   .explore-page[data-view=results] .explore-map-stage, .explore-page[data-view=results].insights-open .explore-map-stage { left: 0; }
   .results-pane { top: 67px; }
-  .restaurant-list-panel { left: 12px; right: 12px; top: auto; bottom: 13px; width: auto; height: min(65svh,580px); }
-  .result-heading { padding: 15px 17px 13px; }
+  .restaurant-list-panel { left: 12px; right: 12px; top: 13px; bottom: 13px; width: auto; height: auto; }
+  .result-heading { padding: 10px 14px; max-height: 50%; overflow-y: auto; }
+  .results-search-fields { grid-template-columns: auto minmax(0,1fr); align-items: center; }
+  .results-search-fields label:not(:first-child) { margin-top: 0; }
   .result-heading h2 { font-size: 20px; margin: 6px 0; }
   .restaurant-card-content { padding: 15px 15px 5px; }
   .restaurant-card h3 { font-size: 14px; }

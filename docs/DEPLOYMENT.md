@@ -6,6 +6,14 @@ HTML/CSS/JavaScript 화면과 Node.js 서버를 하나의 HTTPS 웹 서비스로
 
 ## 1. 배포할 저장소 준비
 
+### Java 정렬 실행 환경 (2026-10-15)
+
+음식점 정렬은 Node 서버가 같은 서비스 안의 Java 프로그램을 실행합니다. 기존 빌드 명령 `npm ci && npm test`와 시작 명령 `npm start`를 그대로 사용합니다. `npm ci`의 postinstall에서 Render 환경(`RENDER=true`)을 감지해 공식 Adoptium API의 Temurin JDK 17 배포 파일을 내려받고 SHA-256을 확인한 뒤 `.java-runtime/`에 풀고 Java 8 호환 클래스를 `algorithm-java/out/`에 컴파일합니다. 키·DB·요금제 변경은 필요 없습니다.
+
+위 두 디렉터리는 Git과 정적 파일 제공에서 제외합니다. 다운로드·체크섬·컴파일이 실패하면 빌드가 실패하고 기존 배포가 유지됩니다. 정렬 요청 시 컴파일하거나 Google을 재조회하지 않으며, 최대 2개 Java 프로세스·힙 32MB·5초 제한을 적용합니다. 웹 정렬 실패 시 기존 목록과 순서를 유지하고 다시 시도할 수 있습니다.
+
+로컬에서는 JDK 8 이상을 PATH에 설정하고 `npm run sorting:build` 후 `npm start`로 실행합니다. Java 코드 변경 후 다시 컴파일하고 서버를 실행하세요. 공개 정렬 API는 기존 공유 서버 로그인 세션을 사용합니다.
+
 현재 원격 저장소는 SSAFY GitLab(`lab.ssafy.com`)입니다. Render에서 연결할 수 있는 GitHub·GitLab.com·Bitbucket 저장소를 준비하는 경로를 권장합니다. 접근 권한이 있는 비공개 GitHub 저장소도 연결할 수 있습니다.
 
 현재 프로젝트 폴더가 저장소 루트입니다. 새 저장소를 연결할 경우 기존 `origin`을 유지하고 `deploy` 같은 별도 원격 이름을 사용하면 수업용 저장소를 그대로 사용할 수 있습니다. 배포용 저장소 주소가 확정된 뒤 원격을 추가하고 변경사항을 커밋·푸시합니다. 저장소 주소에 토큰이나 비밀번호를 넣지 않습니다.

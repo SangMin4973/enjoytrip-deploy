@@ -90,6 +90,15 @@
             <p id="results-search-feedback" role="alert" hidden></p>
           </form>
           <p id="results-count" role="status" aria-live="polite"></p>
+          <div id="restaurant-sort-controls" class="restaurant-sort-controls" hidden>
+            <label for="restaurant-sort">정렬 기준</label>
+            <select id="restaurant-sort" aria-describedby="restaurant-sort-feedback">
+              <option value="search">검색순</option><option value="rating">별점순</option>
+              <option value="count">평가 많은 순</option><option value="recommended">보정 추천순</option>
+            </select>
+            <p id="restaurant-sort-feedback" role="status" aria-live="polite"></p>
+            <button id="retry-restaurant-sort" type="button" class="food-button light" hidden>정렬 다시 시도</button>
+          </div>
         </div>
         <div id="restaurant-list" class="restaurant-list"></div>
         <p id="results-notice" class="results-notice"></p>

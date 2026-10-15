@@ -6,6 +6,7 @@ import { LOGIN_MAP_CONFIG } from './map-config.js';
 import { searchYoutubeVideos } from './youtube-api.js';
 import { buildRestaurantSearchQuery } from './restaurant-search.js';
 import { initRestaurantGallery } from './restaurant-gallery.js';
+import { requestRestaurantRanking, normalizeSortMode, SORT_LABELS } from './restaurant-ranking.js';
 
 const $ = selector => document.querySelector(selector);
 
@@ -27,6 +28,64 @@ export function initRestaurantApp() {
   let videoRevision = 0, videoController, shownVideos = [];
   const imageGallery = initRestaurantGallery();
   let editingSearch = false;
+  let rankedResult = null, ranking = false, rankingError = '', rankingMode = 'rating', rankingRevision = 0, rankingController;
+  const rankingCache = new Map();
+  const orderedRestaurants = () => rankedResult?.restaurants || searchResult?.restaurants || [];
+
+  function cancelRanking() {
+    rankingRevision++; rankingController?.abort(); rankingController = undefined;
+    rankedResult = null; ranking = false; rankingError = ''; rankingCache.clear();
+  }
+
+  function renderRankingControls() {
+    $('#restaurant-sort-controls').hidden = view.source === 'bookmark';
+    $('#restaurant-sort').disabled = searching || ranking || !!searchError || !searchResult?.restaurants.length;
+    $('#restaurant-sort').value = ranking ? rankingMode : rankedResult?.mode || 'search';
+    $('#restaurant-sort-feedback').textContent = ranking ? `${SORT_LABELS[rankingMode]}으로 정렬하는 중…`
+      : rankingError || (rankedResult?.mode === 'recommended' ? '별점과 평가 개수를 반영한 서비스 보정 점수입니다. 기준 평균 4.0 · 가중치 50'
+      : '이번 검색에서 모은 전체 결과를 기준으로 정렬합니다.');
+    $('#retry-restaurant-sort').hidden = !rankingError || ranking;
+    const pageResult = restaurantPage(orderedRestaurants(), view.page);
+    $('#previous-restaurants').disabled = searching || ranking || !!searchError || !pageResult.hasPrevious;
+    $('#next-restaurants').disabled = searching || ranking || !!searchError || !pageResult.hasNext;
+  }
+
+  function renderRankingScores() {
+    $('#restaurant-list').querySelectorAll('.restaurant-card').forEach(card => {
+      const score = rankedResult?.mode === 'recommended' ? rankedResult.scores.get(card.dataset.id) : null;
+      const label = card.querySelector('.restaurant-score');
+      label.hidden = score == null;
+      label.textContent = score == null ? '' : `서비스 보정 점수 ${score.toFixed(2)}`;
+    });
+  }
+
+  async function changeRanking(mode) {
+    member();
+    if (searching || searchError || !searchResult || view.source !== 'search') return;
+    mode = normalizeSortMode(mode);
+    rankingController?.abort(); rankingController = new AbortController();
+    const currentRevision = ++rankingRevision, currentSearch = searchResult, userId = member().id;
+    const isCurrent = () => active && route === 'results' && currentSearch === searchResult
+      && currentRevision === rankingRevision && auth.currentUser()?.id === userId;
+    rankingMode = mode; ranking = true; rankingError = ''; renderRankingControls();
+    try {
+      const result = rankingCache.get(mode) || await requestRestaurantRanking(currentSearch.restaurants, mode, { signal: rankingController.signal });
+      if (!isCurrent()) return;
+      rankingCache.set(mode, result); rankedResult = result;
+      const selectedId = view.selectedId, selectedIndex = result.restaurants.findIndex(item => item.id === selectedId);
+      view.sortMode = mode; view.page = selectedIndex < 0 ? 1 : Math.floor(selectedIndex / 15) + 1;
+      store.saveView(view); $('#restaurant-list').scrollTop = 0;
+      // 같은 카드 DOM을 이동해 사진과 열린 상세 화면을 유지합니다.
+      renderList({ reuseCards: true });
+      if (view.selectedId !== selectedId) renderInsights();
+      renderMarkers();
+    } catch (error) {
+      if (!isCurrent()) return;
+      rankingError = error.message || '정렬을 완료하지 못했습니다. 다시 시도해 주세요.';
+    } finally {
+      if (isCurrent()) { ranking = false; renderRankingControls(); }
+    }
+  }
 
   function setSearchEditing(editing) {
     editingSearch = editing;
@@ -79,6 +138,7 @@ export function initRestaurantApp() {
     const photos = element('div'); imageGallery.add(restaurant, photos);
     const info = element('div', 'restaurant-card-info');
     info.append(element('p', '', restaurant.phone || '전화번호 미등록'), element('p', '', restaurant.address || '주소 미등록'), element('p', 'restaurant-rating', ratingText(restaurant)));
+    const scoreLabel = element('p', 'restaurant-score'); scoreLabel.hidden = true; info.append(scoreLabel);
     if (restaurant.source === 'google') {
       const source = element('p', 'google-attribution', 'Google Maps'); info.append(source);
       restaurant.attributions?.forEach(item => info.append(element('p', 'google-attribution', item.name)));
@@ -92,12 +152,13 @@ export function initRestaurantApp() {
     return article;
   }
 
-  function renderList() {
-    imageGallery.clear();
+  function renderList({ reuseCards = false } = {}) {
+    if (!reuseCards) imageGallery.clear();
     const list = $('#restaurant-list'), scrollTop = list.scrollTop;
+    const cards = reuseCards ? new Map([...list.querySelectorAll('.restaurant-card')].map(card => [card.dataset.id, card])) : new Map();
     list.replaceChildren();
     let missing = 0;
-    const pageResult = restaurantPage(searchResult?.restaurants || [], view.page);
+    const pageResult = restaurantPage(orderedRestaurants(), view.page);
     const isSearch = view.source !== 'bookmark';
     $('#results-search-form').hidden = !isSearch;
     $('#results-heading').hidden = isSearch;
@@ -114,7 +175,7 @@ export function initRestaurantApp() {
       visibleRestaurants = searching || searchError ? [] : pageResult.restaurants;
     }
     $('#results-count').textContent = searching ? 'Google Maps 검색 결과를 모으는 중…' : searchError ? '검색 연결 오류' : view.source === 'bookmark' ? `음식점 ${visibleRestaurants.length}곳 · 내 북마크 장소 정보` : `검색 결과 총 ${pageResult.total}곳 · 현재 ${visibleRestaurants.length}곳 표시`;
-    $('#results-notice').textContent = missing ? `정보를 불러오지 못한 음식점 ${missing}곳은 표시하지 않습니다. 기존 북마크는 보존됩니다.` : view.source === 'bookmark' ? 'Google 장소는 현재 조회 정보이며, 기존 카카오 장소는 저장 당시 정보입니다.' : `Google 검색 결과를 최대 3페이지·45곳까지 모아 15곳씩 표시합니다.${searchResult?.truncated ? ' 추가 결과가 있을 수 있습니다.' : ''} Google Maps 검색 순서를 유지합니다.`;
+    $('#results-notice').textContent = missing ? `정보를 불러오지 못한 음식점 ${missing}곳은 표시하지 않습니다. 기존 북마크는 보존됩니다.` : view.source === 'bookmark' ? 'Google 장소는 현재 조회 정보이며, 기존 카카오 장소는 저장 당시 정보입니다.' : `Google 검색 결과를 최대 3페이지·45곳까지 모아 15곳씩 표시합니다.${searchResult?.truncated ? ' 추가 결과가 있을 수 있습니다.' : ''} 현재 ${SORT_LABELS[rankedResult?.mode || 'search']}입니다.`;
     $('#restaurant-list').setAttribute('aria-busy', String(searching));
     $('#search-pagination').hidden = view.source === 'bookmark' || searching || !!searchError || !searchResult?.restaurants.length;
     $('#search-page-label').textContent = `${pageResult.page} / ${pageResult.totalPages}페이지 · 총 ${pageResult.total}곳`;
@@ -125,9 +186,10 @@ export function initRestaurantApp() {
       empty.append(element('strong', '', searching ? '음식점을 찾고 있어요.' : searchError ? '검색을 완료하지 못했어요.' : view.source === 'bookmark' ? '표시할 맛집이 없어요.' : '찾는 맛집이 없어요.'), element('p', '', searching ? '잠시만 기다려 주세요.' : searchError || (view.source === 'bookmark' ? '실제 음식점을 검색하고 별표를 눌러 담아보세요.' : '지역을 더 구체적으로 입력하거나 메뉴를 바꿔보세요.')));
       if (searchError) { const retry = element('button', 'food-button light', '다시 시도'); retry.type = 'button'; retry.dataset.action = 'retry'; empty.append(retry); }
       const back = element('a', '', '다시 맛집 찾기'); back.href = '#home'; empty.append(back); list.append(empty);
-    } else visibleRestaurants.forEach(restaurant => list.append(restaurantCard(restaurant)));
+    } else visibleRestaurants.forEach(restaurant => list.append(cards.get(restaurant.id) || restaurantCard(restaurant)));
     list.scrollTop = scrollTop;
     if (!visibleRestaurants.some(item => item.id === view.selectedId)) view.selectedId = null;
+    renderRankingScores(); renderRankingControls();
   }
 
   function setSearchLinks(restaurant) {
@@ -380,6 +442,7 @@ export function initRestaurantApp() {
 
   // 새 검색·화면 이동·로그아웃 뒤에는 남은 페이지를 요청하거나 결과를 반영하지 않습니다.
   async function runSearch() {
+    cancelRanking();
     const requestRevision = ++revision, userId = member().id;
     const requestView = { ...view, page: view.page || 1 };
     searching = true; searchError = ''; searchResult = null;
@@ -404,12 +467,15 @@ export function initRestaurantApp() {
         searching = false; renderList(); renderInsights(); renderMarkers();
       }
     }
+    if (active && revision === requestRevision && auth.currentUser()?.id === userId && !searchError && searchResult) {
+      await changeRanking(normalizeSortMode(view.sortMode));
+    }
   }
 
   async function changeSearchPage(delta) {
     member();
-    if (searching || searchError || !searchResult || view.source !== 'search') return;
-    const nextPage = restaurantPage(searchResult.restaurants, (view.page || 1) + delta).page;
+    if (searching || ranking || searchError || !searchResult || view.source !== 'search') return;
+    const nextPage = restaurantPage(orderedRestaurants(), (view.page || 1) + delta).page;
     if (nextPage === (view.page || 1)) return;
     view.page = nextPage; view.selectedId = null; store.saveView(view);
     $('#restaurant-list').scrollTop = 0;
@@ -417,6 +483,8 @@ export function initRestaurantApp() {
   }
   $('#previous-restaurants').addEventListener('click', () => changeSearchPage(-1).catch(error => toast(error.message)));
   $('#next-restaurants').addEventListener('click', () => changeSearchPage(1).catch(error => toast(error.message)));
+  $('#restaurant-sort').addEventListener('change', event => changeRanking(event.target.value).catch(error => toast(error.message)));
+  $('#retry-restaurant-sort').addEventListener('click', () => changeRanking(rankingMode).catch(error => toast(error.message)));
 
   $('#restaurant-search-form').addEventListener('submit', async event => {
     event.preventDefault(); const button = $('#restaurant-search-submit'); button.disabled = true;
@@ -424,7 +492,7 @@ export function initRestaurantApp() {
       member();
       const region = $('#search-region').value.trim(), menu = $('#search-menu').value.trim();
       if (!region) throw new Error('검색할 지역을 입력해 주세요.');
-      view = { source: 'search', region, menu, page: 1, bookmarkId: null, selectedId: null }; store.saveView(view);
+      view = { source: 'search', region, menu, page: 1, bookmarkId: null, selectedId: null, sortMode: normalizeSortMode(view.sortMode) }; store.saveView(view);
       $('#search-feedback').hidden = true; location.hash = 'results';
     } catch (error) { $('#search-feedback').textContent = error.message; $('#search-feedback').hidden = false; }
     finally { button.disabled = false; }
@@ -451,7 +519,7 @@ export function initRestaurantApp() {
       member();
       const region = $('#results-search-region').value.trim(), menu = $('#results-search-menu').value.trim();
       if (!region) throw new Error('검색할 지역을 입력해 주세요.');
-      view = { source: 'search', region, menu, page: 1, bookmarkId: null, selectedId: null };
+      view = { source: 'search', region, menu, page: 1, bookmarkId: null, selectedId: null, sortMode: normalizeSortMode(view.sortMode) };
       store.saveView(view);
       $('#search-region').value = region; $('#search-menu').value = menu;
       setSearchEditing(false);
@@ -583,6 +651,7 @@ export function initRestaurantApp() {
     configureMap(key) { mapKey = key || LOGIN_MAP_CONFIG.appKey; },
     requestMyPage,
     async setRoute(next) {
+      cancelRanking();
       setSearchEditing(false);
       cancelVideos();
       imageGallery.clear();
@@ -605,6 +674,7 @@ export function initRestaurantApp() {
       await ensureMap();
     },
     deactivate() {
+      cancelRanking();
       cancelVideos();
       imageGallery.clear();
       active = false; revision++; clearTimeout(toastTimer); $('#explore-toast').hidden = true;
