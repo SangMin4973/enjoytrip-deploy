@@ -54,6 +54,20 @@ body.workspace-screen { padding: 0; overflow: hidden; background: var(--food-yel
 .eyebrow { font-size: 10px; letter-spacing: 1px; color: #b18140; }
 .result-heading h2 { margin: 9px 0 9px; font-size: 24px; line-height: 1.5; font-weight: 700; color: var(--food-deep); overflow-wrap: anywhere; }
 .result-heading p { margin: 0; font-size: 11px; color: #a1814d; }
+.results-search-form { margin: 10px 0 12px; }
+.results-search-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; color: #a1814d; font-size: 11px; }
+.results-search-toolbar button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 5px; border: 1px solid #c38c4b; background: #fffdf2; color: var(--food-deep); cursor: pointer; }
+.results-search-toolbar button:hover { background: #ffecaf; }
+.results-search-fields { display: grid; grid-template-columns: minmax(0,1fr); gap: 6px; }
+.results-search-fields label { margin: 0; font-size: 10px; color: #85502c; }
+.results-search-fields label:not(:first-child) { margin-top: 3px; }
+.explore-page .results-search-fields input { height: 36px; min-width: 0; font-size: 14px; font-weight: 700; }
+.explore-page .results-search-fields input[readonly] { background: #fff3cf; box-shadow: none; color: var(--food-deep); }
+.results-search-actions { display: flex; gap: 9px; margin-top: 12px; }
+.results-search-actions .food-button { padding: 6px 10px; font-size: 11px; }
+.result-heading #results-search-feedback { margin-top: 10px; color: var(--food-deep); }
+.results-search-form button:focus-visible, .results-search-fields input:focus-visible { outline: 2px solid var(--food-red); outline-offset: 2px; }
+.result-heading { flex-shrink: 0; }
 .restaurant-list { flex: 1; overflow-y: auto; min-height: 0; overscroll-behavior: contain; padding: 8px 0; }
 .restaurant-card { position: relative; border-bottom: 1px solid #e7d5ad; background: #fff9df; transition: background .1s; }
 .restaurant-card.selected { background: #fff0ba; box-shadow: inset 4px 0 0 var(--food-red); }

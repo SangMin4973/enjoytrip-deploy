@@ -75,7 +75,22 @@
     <div id="results-pane" class="results-pane" hidden>
       <section class="food-window restaurant-list-panel" aria-labelledby="results-heading">
         <div class="food-titlebar"><a href="#home" aria-label="검색 화면으로 돌아가기">←</a><span>맛집 찾기</span><span aria-hidden="true">▪ ▪ ▪</span></div>
-        <div class="result-heading"><span id="results-source" class="eyebrow">검색한 맛집</span><h2 id="results-heading"></h2><p id="results-count" role="status" aria-live="polite"></p></div>
+        <div class="result-heading">
+          <span id="results-source" class="eyebrow">검색한 맛집</span>
+          <h2 id="results-heading"></h2>
+          <form id="results-search-form" class="results-search-form" hidden>
+            <div class="results-search-toolbar"><span>검색 조건</span><button id="edit-results-search" type="button" aria-label="지역과 메뉴 수정" aria-expanded="false" aria-controls="results-search-fields"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6Z"/><path d="m14 5 5 5"/></svg></button></div>
+            <div id="results-search-fields" class="results-search-fields">
+              <label for="results-search-region">지역 <span class="field-required">필수</span></label>
+              <input id="results-search-region" name="region" maxlength="40" list="search-regions" autocomplete="off" required readonly>
+              <label for="results-search-menu">메뉴 <span class="optional-label">선택</span></label>
+              <input id="results-search-menu" name="menu" maxlength="60" placeholder="전체 음식점" autocomplete="off" readonly>
+            </div>
+            <div id="results-search-actions" class="results-search-actions" hidden><button type="submit" class="food-button red">다시 검색</button><button id="cancel-results-search" type="button" class="food-button light">취소</button></div>
+            <p id="results-search-feedback" role="alert" hidden></p>
+          </form>
+          <p id="results-count" role="status" aria-live="polite"></p>
+        </div>
         <div id="restaurant-list" class="restaurant-list"></div>
         <p id="results-notice" class="results-notice"></p>
         <div id="search-pagination" class="search-pagination" hidden><button id="previous-restaurants" type="button" class="food-button light">이전</button><span id="search-page-label"></span><button id="next-restaurants" type="button" class="food-button light">다음</button></div>

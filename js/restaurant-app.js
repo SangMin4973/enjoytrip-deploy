@@ -26,6 +26,20 @@ export function initRestaurantApp() {
   let revision = 0, toastTimer, resizeTimer, bookmarkRestaurantId, confirmTarget = 'bookmarks';
   let videoRevision = 0, videoController, shownVideos = [];
   const imageGallery = initRestaurantGallery();
+  let editingSearch = false;
+
+  function setSearchEditing(editing) {
+    editingSearch = editing;
+    $('#edit-results-search').setAttribute('aria-expanded', String(editing));
+    $('#results-search-region').readOnly = !editing;
+    $('#results-search-menu').readOnly = !editing;
+    $('#results-search-actions').hidden = !editing;
+    $('#results-search-feedback').hidden = true;
+    if (!editing) {
+      $('#results-search-region').value = view.region || '';
+      $('#results-search-menu').value = view.menu || '';
+    }
+  }
 
   function toast(message) {
     const box = $('#explore-toast'); box.textContent = message; box.hidden = !message;
@@ -84,6 +98,10 @@ export function initRestaurantApp() {
     list.replaceChildren();
     let missing = 0;
     const pageResult = restaurantPage(searchResult?.restaurants || [], view.page);
+    const isSearch = view.source !== 'bookmark';
+    $('#results-search-form').hidden = !isSearch;
+    $('#results-heading').hidden = isSearch;
+    if (!editingSearch) setSearchEditing(false);
     if (view.source === 'bookmark') {
       const bookmark = store.loadBookmarks(member().id).find(item => item.id === view.bookmarkId);
       $('#results-source').textContent = '내 북마크';
@@ -412,6 +430,40 @@ export function initRestaurantApp() {
     finally { button.disabled = false; }
   });
 
+  $('#edit-results-search').addEventListener('click', () => {
+    setSearchEditing(true);
+    $('#results-search-region').focus();
+    $('#results-search-region').select();
+  });
+  $('#cancel-results-search').addEventListener('click', () => {
+    setSearchEditing(false);
+    $('#edit-results-search').focus();
+  });
+  $('#results-search-form').addEventListener('keydown', event => {
+    if (event.key === 'Escape' && editingSearch) {
+      event.preventDefault(); setSearchEditing(false); $('#edit-results-search').focus();
+    }
+  });
+  $('#results-search-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!editingSearch) return;
+    try {
+      member();
+      const region = $('#results-search-region').value.trim(), menu = $('#results-search-menu').value.trim();
+      if (!region) throw new Error('검색할 지역을 입력해 주세요.');
+      view = { source: 'search', region, menu, page: 1, bookmarkId: null, selectedId: null };
+      store.saveView(view);
+      $('#search-region').value = region; $('#search-menu').value = menu;
+      setSearchEditing(false);
+      $('#restaurant-list').scrollTop = 0;
+      $('#edit-results-search').focus();
+      await runSearch();
+    } catch (error) {
+      $('#results-search-feedback').textContent = error.message;
+      $('#results-search-feedback').hidden = false;
+    }
+  });
+
   $('#restaurant-list').addEventListener('click', event => {
     const button = event.target.closest('button[data-action]'); if (!button) return;
     try {
@@ -531,6 +583,7 @@ export function initRestaurantApp() {
     configureMap(key) { mapKey = key || LOGIN_MAP_CONFIG.appKey; },
     requestMyPage,
     async setRoute(next) {
+      setSearchEditing(false);
       cancelVideos();
       imageGallery.clear();
       active = true; route = next; const currentRevision = ++revision;
