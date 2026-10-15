@@ -1,11 +1,11 @@
 # 맛집기행 테스트 단계
 
-## Java 정렬·보정 추천 준비 — 2026-10-15
+## Java 정렬·보정 추천 구현 — 2026-10-15
 
 - Node 회귀·입력 전달 검사 64개 통과. 추천 모드 입력과 합성 fixture 예상 ID 목록도 포함.
 - `sorting:test`: Java 기본 정렬·실제 동점 안정성·원본 보존·45곳 전체 입력·추천 빈 입력/결측 입력 연결 검사 65개 단언 통과.
 - `sorting:check`의 별점순·평가 개수순 샘플 통과. 사용자 기본 병합 정렬은 비교자를 전달받는 경로로 재사용.
-- `recommendation:sample`: 입력·실행 연결 이후 TODO 안내. `recommendation:check`: 미구현 종료 코드 2 확인. 계산·추천 비교의 정확성은 아직 미검증.
+- recommendation:sample에서 점수·추천 순서 출력, recommendation:check에서 계산 오차 1e-9 이하·m=0/큰 m·결측·모든 동점 기준·원본 보존·비정상 점수·잘못된 설정 검사가 통과했다. recommended 샘플 ID 순서 검사도 통과했다.
 - `sorting:benchmark`: 합성 15~100,000개, 네 입력 형태, 두 모드 실행·결과 검증 완료. 실측 기록은 [ALGORITHM_BENCHMARK.md](ALGORITHM_BENCHMARK.md).
 - 실제 유료 API·공용 DB·웹 정렬·배포 설정은 이번 준비에서 변경하지 않음. Java와 웹의 동일 결과 검증은 연결 방향 결정 후 진행.
 

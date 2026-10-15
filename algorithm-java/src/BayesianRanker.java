@@ -1,7 +1,7 @@
 import java.util.Comparator;
 import java.util.Objects;
 
-/** 직접 작성할 부분: score()와 compare()의 TODO 두 곳입니다. */
+/** Google 평가를 보정한 별도 점수로 순위를 계산합니다. 원본 장소는 변경하지 않습니다. */
 public final class BayesianRanker {
     public static final double DEFAULT_PRIOR_MEAN = 4.0;
     public static final double DEFAULT_PRIOR_WEIGHT = 50.0;
@@ -29,25 +29,45 @@ public final class BayesianRanker {
         });
     }
 
-    /** 유효한 평가에 대해 (v*R + m*C)/(v+m)를 계산하는 공간입니다. */
+    /** (v*R + m*C)/(v+m)와 동치인 식으로 큰 m에서도 곱셈 오버플로를 피합니다. */
     public static double score(RestaurantCandidate restaurant,
             double priorMean, double priorWeight) {
-        // TODO 1: 보정 추천 점수 계산. 정렬용 값은 반올림하지 마세요.
-
-        throw new UnsupportedOperationException("BayesianRanker TODO 1: score");
+        Objects.requireNonNull(restaurant, "음식점이 필요합니다.");
+        validateParameters(priorMean, priorWeight);
+        if (!hasRating(restaurant)) {
+            throw new IllegalArgumentException("보정 점수에는 유효한 Google 별점과 양의 평가 개수가 필요합니다.");
+        }
+        double priorShare = priorWeight / (restaurant.userRatingCount + priorWeight);
+        return restaurant.rating + (priorMean - restaurant.rating) * priorShare;
     }
 
     /** 음수: a가 앞 / 양수: b가 앞 / 0: 동점 */
     public static int compare(RankedRestaurant a, RankedRestaurant b) {
-        // TODO 2: 점수 보유 여부 → 보정 점수 → 원본 별점 → 평가 수 → 최초 순서.
-        // 점수가 없는 장소도 지우지 않고 뒤에서 최초 순서를 유지하세요.
-
-        throw new UnsupportedOperationException("BayesianRanker TODO 2: compare");
+        Objects.requireNonNull(a, "비교할 추천 결과가 필요합니다.");
+        Objects.requireNonNull(b, "비교할 추천 결과가 필요합니다.");
+        Objects.requireNonNull(a.restaurant, "원본 음식점이 필요합니다.");
+        Objects.requireNonNull(b.restaurant, "원본 음식점이 필요합니다.");
+        validateView(a);
+        validateView(b);
+        boolean aHasScore = a.score != null, bHasScore = b.score != null;
+        if (aHasScore != bHasScore) return aHasScore ? -1 : 1;
+        if (!aHasScore) {
+            return Integer.compare(a.restaurant.originalIndex, b.restaurant.originalIndex);
+        }
+        int comparison = Double.compare(b.score, a.score);
+        if (comparison != 0) return comparison;
+        return StableMergeSort.compare(a.restaurant, b.restaurant, SortMode.RATING_DESC);
     }
 
     public static boolean hasRating(RestaurantCandidate item) {
         return "google".equals(item.source) && item.rating != null && Double.isFinite(item.rating)
                 && item.rating >= 1 && item.rating <= 5 && item.userRatingCount > 0;
+    }
+
+    private static void validateView(RankedRestaurant item) {
+        if (item.score != null && (!Double.isFinite(item.score) || item.score < 1 || item.score > 5 || !hasRating(item.restaurant))) {
+            throw new IllegalArgumentException("추천 점수는 유효한 평가와 유한한 1~5 범위가 필요합니다.");
+        }
     }
 
     private static void validateParameters(double priorMean, double priorWeight) {

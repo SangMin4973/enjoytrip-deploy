@@ -2,7 +2,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-/** 데이터 호출 이후 Java에서 입력을 출력하고, 사용자가 채운 정렬 메서드를 실행합니다. */
+/** 데이터 호출 이후 Java에서 입력을 출력하고 기본 정렬 또는 보정 추천을 실행합니다. */
 public final class SortingMain {
     public static void main(String[] args) {
         try {
@@ -13,26 +13,19 @@ public final class SortingMain {
             RestaurantCandidate[] original = input.restaurants.clone();
             RestaurantCandidate[] result;
             RankedRestaurant[] ranked = null;
-            try {
-                if (input.mode == SortMode.RECOMMENDED) {
-                    double priorMean = numberOption(args, "--prior-mean", BayesianRanker.DEFAULT_PRIOR_MEAN);
-                    double priorWeight = numberOption(args, "--prior-weight", BayesianRanker.DEFAULT_PRIOR_WEIGHT);
-                    System.out.println("보정 설정: C=" + priorMean + ", m=" + priorWeight);
-                    ranked = BayesianRanker.rank(input.restaurants, priorMean, priorWeight);
-                    result = new RestaurantCandidate[ranked.length];
-                    for (int i = 0; i < ranked.length; i++) result[i] = ranked[i].restaurant;
-                } else {
-                    result = StableMergeSort.sort(input.restaurants, input.mode);
-                }
-            } catch (UnsupportedOperationException error) {
-                System.out.println("\n[미구현] " + error.getMessage());
-                System.out.println("데이터 전달은 완료됐습니다. BayesianRanker.java의 TODO 1~2를 작성하세요.");
-                if (check) System.exit(2);
-                return;
+            if (input.mode == SortMode.RECOMMENDED) {
+                double priorMean = numberOption(args, "--prior-mean", BayesianRanker.DEFAULT_PRIOR_MEAN);
+                double priorWeight = numberOption(args, "--prior-weight", BayesianRanker.DEFAULT_PRIOR_WEIGHT);
+                System.out.println("보정 설정: C=" + priorMean + ", m=" + priorWeight);
+                ranked = BayesianRanker.rank(input.restaurants, priorMean, priorWeight);
+                result = new RestaurantCandidate[ranked.length];
+                for (int i = 0; i < ranked.length; i++) result[i] = ranked[i].restaurant;
+            } else {
+                result = StableMergeSort.sort(input.restaurants, input.mode);
             }
             if (!Arrays.equals(original, input.restaurants)) throw new IllegalStateException("정렬이 원본 배열을 변경했습니다.");
             verifySameIds(input.restaurants, result);
-            print("사용자 구현 결과", result);
+            print("정렬 결과", result);
             if (ranked != null) {
                 System.out.println("\n[서비스 보정 점수 · Google 원본 별점과 별개]");
                 for (RankedRestaurant item : ranked) {

@@ -1,6 +1,6 @@
 import java.util.Arrays;
 
-/** 사용자 TODO 구현 후 점수·정렬·결측·설정 경계를 확인하는 검사입니다. */
+/** 점수·정렬·결측·설정 경계와 원본 보존을 확인하는 검사입니다. */
 public final class RecommendationTest {
     public static void main(String[] args) {
         try {
@@ -9,6 +9,10 @@ public final class RecommendationTest {
             near(BayesianRanker.score(b, 4, 50), 4.636363636363637);
             near(BayesianRanker.score(c, 4, 50), 4.333333333333333);
             near(BayesianRanker.score(b, 4, 0), 4.7);
+            near(BayesianRanker.score(a, 4, Double.MAX_VALUE), 4.0);
+            check(BayesianRanker.compare(new RankedRestaurant(a, 4.5), new RankedRestaurant(b, 4.5)) < 0, "점수 동점이면 원본 별점순");
+            check(BayesianRanker.compare(new RankedRestaurant(item("many", 4.7, 100, 0), 4.5),
+                new RankedRestaurant(item("few", 4.7, 10, 1), 4.5)) < 0, "점수·별점 동점이면 평가 수순");
             RestaurantCandidate[] input = { a, b, c, item("D", null, 0, 3), item("E", 4.9, 0, 4),
                 new RestaurantCandidate("F", "F", "kakao", null, 0, 5) };
             RestaurantCandidate[] original = input.clone();
@@ -23,6 +27,16 @@ public final class RecommendationTest {
             check(BayesianRanker.rank(new RestaurantCandidate[0], 4, 50).length == 0, "빈 배열");
             RankedRestaurant[] tied = BayesianRanker.rank(new RestaurantCandidate[] { item("first", 4.7, 500, 0), item("second", 4.7, 500, 1) }, 4, 50);
             check("first".equals(tied[0].restaurant.id), "추천 완전 동점의 최초 순서");
+            RankedRestaurant[] missing = BayesianRanker.rank(new RestaurantCandidate[] { item("first", null, 0, 0), item("second", 4.8, 0, 1) }, 4, 50);
+            check("first".equals(missing[0].restaurant.id) && missing[1].score == null, "평가 없음만 있어도 최초 순서 보존");
+            boolean missingRejected = false;
+            try { BayesianRanker.score(item("missing", null, 0, 0), 4, 50); }
+            catch (IllegalArgumentException expected) { missingRejected = true; }
+            check(missingRejected, "평가 없는 장소에 점수를 직접 계산하지 않음");
+            boolean invalidScoreRejected = false;
+            try { BayesianRanker.compare(new RankedRestaurant(a, Double.NaN), new RankedRestaurant(b, 4.0)); }
+            catch (IllegalArgumentException expected) { invalidScoreRejected = true; }
+            check(invalidScoreRejected, "비정상 점수 거부");
             for (double[] parameters : new double[][] { { Double.NaN, 50 }, { 6, 50 }, { 4, -1 }, { 4, Double.POSITIVE_INFINITY } }) {
                 boolean rejected = false;
                 try { BayesianRanker.rank(input, parameters[0], parameters[1]); }
@@ -30,9 +44,6 @@ public final class RecommendationTest {
                 check(rejected, "잘못된 C/m 거부");
             }
             System.out.println("[통과] 보정 점수·추천 순서·결측·원본 보존·설정 경계 (오차 1e-9 이하)");
-        } catch (UnsupportedOperationException error) {
-            System.out.println("[미구현] " + error.getMessage());
-            System.out.println("BayesianRanker.java의 TODO 두 곳을 작성하면 이 검사가 실행됩니다."); System.exit(2);
         } catch (RuntimeException | AssertionError error) {
             System.err.println("[실패] " + error.getMessage()); System.exit(1);
         }

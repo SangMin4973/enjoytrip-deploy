@@ -45,4 +45,4 @@ npm run sorting:benchmark
 npm run sorting:benchmark -- --mode count
 ```
 
-이 기록은 완성된 기본 정렬의 측정이다. 보정 추천은 BayesianRanker의 TODO 두 곳이 남아 있으며 추천 성능·웹 성능·Java와 웹 결과 일치는 아직 검증하지 않았다.
+이 기록은 기본 정렬의 측정이다. 이후 보정 추천 계산·비교도 구현하고 정확성 검사를 통과했으며, 보정 추천 성능·웹 성능·Java와 웹 결과 일치는 아직 측정하지 않았다.
