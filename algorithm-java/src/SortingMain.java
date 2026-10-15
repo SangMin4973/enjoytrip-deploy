@@ -12,17 +12,33 @@ public final class SortingMain {
             print("정렬 전 · 수집 순서", input.restaurants);
             RestaurantCandidate[] original = input.restaurants.clone();
             RestaurantCandidate[] result;
+            RankedRestaurant[] ranked = null;
             try {
-                result = StableMergeSort.sort(input.restaurants, input.mode);
+                if (input.mode == SortMode.RECOMMENDED) {
+                    double priorMean = numberOption(args, "--prior-mean", BayesianRanker.DEFAULT_PRIOR_MEAN);
+                    double priorWeight = numberOption(args, "--prior-weight", BayesianRanker.DEFAULT_PRIOR_WEIGHT);
+                    System.out.println("보정 설정: C=" + priorMean + ", m=" + priorWeight);
+                    ranked = BayesianRanker.rank(input.restaurants, priorMean, priorWeight);
+                    result = new RestaurantCandidate[ranked.length];
+                    for (int i = 0; i < ranked.length; i++) result[i] = ranked[i].restaurant;
+                } else {
+                    result = StableMergeSort.sort(input.restaurants, input.mode);
+                }
             } catch (UnsupportedOperationException error) {
                 System.out.println("\n[미구현] " + error.getMessage());
-                System.out.println("데이터 전달은 완료됐습니다. StableMergeSort.java의 TODO 1~3을 작성하세요.");
+                System.out.println("데이터 전달은 완료됐습니다. BayesianRanker.java의 TODO 1~2를 작성하세요.");
                 if (check) System.exit(2);
                 return;
             }
             if (!Arrays.equals(original, input.restaurants)) throw new IllegalStateException("정렬이 원본 배열을 변경했습니다.");
             verifySameIds(input.restaurants, result);
             print("사용자 구현 결과", result);
+            if (ranked != null) {
+                System.out.println("\n[서비스 보정 점수 · Google 원본 별점과 별개]");
+                for (RankedRestaurant item : ranked) {
+                    System.out.println(item.restaurant.id + "\t" + (item.score == null ? "평가 없음" : item.score));
+                }
+            }
             if (check) {
                 if (input.expectedIds.length != result.length) throw new IllegalStateException("예상 결과 개수가 다릅니다.");
                 for (int i = 0; i < result.length; i++) {
@@ -35,6 +51,16 @@ public final class SortingMain {
             System.err.println("[실패] " + error.getMessage());
             System.exit(1);
         }
+    }
+
+    private static double numberOption(String[] args, String name, double fallback) {
+        for (int i = 0; i < args.length; i++) {
+            if (name.equals(args[i])) {
+                if (i + 1 >= args.length) throw new IllegalArgumentException(name + " 값이 필요합니다.");
+                return Double.parseDouble(args[i + 1]);
+            }
+        }
+        return fallback;
     }
 
     private static void verifySameIds(RestaurantCandidate[] input, RestaurantCandidate[] result) {

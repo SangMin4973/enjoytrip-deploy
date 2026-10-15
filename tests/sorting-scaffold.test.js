@@ -62,10 +62,10 @@ test('정렬 실습 데이터 호출은 기존 Google 검색·페이지 수집�
   assert.equal(requests.length, 2);
 });
 
-test('연습용 예상 결과는 두 모드에서 모든 입력 ID를 포함하고 실제 Google 데이터 없이 실행할 수 있다', async () => {
+test('연습용 예상 결과는 세 모드에서 모든 입력 ID를 포함하고 실제 Google 데이터 없이 실행할 수 있다', async () => {
   const fixture = JSON.parse(await readFile(new URL('../algorithm-java/fixtures/sample.json', import.meta.url), 'utf8'));
   const ids = new Set(fixture.restaurants.map(item => item.id));
-  for (const mode of ['rating', 'count']) {
+  for (const mode of ['rating', 'count', 'recommended']) {
     assert.deepEqual(new Set(fixture.expected[mode]), ids);
     assert.equal(fixture.expected[mode].length, fixture.restaurants.length);
     assert.ok(javaSortingInput(fixture.restaurants, { mode, expectedIds: fixture.expected[mode] }).startsWith('MATZIP_SORT_V1'));

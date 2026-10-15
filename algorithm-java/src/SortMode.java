@@ -1,4 +1,5 @@
 public enum SortMode {
     RATING_DESC,
-    COUNT_DESC
+    COUNT_DESC,
+    RECOMMENDED
 }

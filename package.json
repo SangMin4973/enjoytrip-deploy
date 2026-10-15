@@ -12,6 +12,10 @@
     "sorting:build": "node scripts/sorting-exercise.mjs build",
     "sorting:sample": "node scripts/sorting-exercise.mjs sample",
     "sorting:google": "node scripts/sorting-exercise.mjs google",
-    "sorting:check": "node scripts/sorting-exercise.mjs check"
+    "sorting:check": "node scripts/sorting-exercise.mjs check",
+    "sorting:test": "node scripts/sorting-exercise.mjs test",
+    "sorting:benchmark": "node scripts/sorting-exercise.mjs benchmark",
+    "recommendation:sample": "node scripts/sorting-exercise.mjs sample --mode recommended",
+    "recommendation:check": "node scripts/sorting-exercise.mjs recommendation-test"
   }
 }

@@ -12,6 +12,7 @@
   ],
   "expected": {
     "rating": ["sample-C", "sample-F", "sample-B", "sample-E", "sample-A", "sample-D", "sample-G", "sample-H"],
-    "count": ["sample-B", "sample-E", "sample-A", "sample-C", "sample-F", "sample-D", "sample-G", "sample-H"]
+    "count": ["sample-B", "sample-E", "sample-A", "sample-C", "sample-F", "sample-D", "sample-G", "sample-H"],
+    "recommended": ["sample-B", "sample-E", "sample-A", "sample-C", "sample-F", "sample-D", "sample-G", "sample-H"]
   }
 }

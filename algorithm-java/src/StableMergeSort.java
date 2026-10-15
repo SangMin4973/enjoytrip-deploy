@@ -1,3 +1,6 @@
+import java.util.Comparator;
+import java.util.Objects;
+
 public final class StableMergeSort {
     private StableMergeSort() { }
 
@@ -5,11 +8,25 @@ public final class StableMergeSort {
             RestaurantCandidate[] input,
             SortMode mode
     ) {
-        RestaurantCandidate[] result = input.clone();
-        RestaurantCandidate[] buffer =
-                new RestaurantCandidate[input.length];
+        Objects.requireNonNull(mode, "정렬 모드가 필요합니다.");
+        if (mode == SortMode.RECOMMENDED) {
+            throw new IllegalArgumentException("보정 추천은 BayesianRanker.rank()로 실행하세요.");
+        }
+        return sort(input, new Comparator<RestaurantCandidate>() {
+            @Override
+            public int compare(RestaurantCandidate a, RestaurantCandidate b) {
+                return StableMergeSort.compare(a, b, mode);
+            }
+        });
+    }
 
-        mergeSort(result, buffer, 0, result.length, mode);
+    // 사용자가 구현한 병합 정렬을 다른 비교 기준에서도 재사용하는 실행 연결입니다.
+    public static <T> T[] sort(T[] input, Comparator<? super T> comparator) {
+        Objects.requireNonNull(input, "입력 배열이 필요합니다.");
+        Objects.requireNonNull(comparator, "비교 기준이 필요합니다.");
+        T[] result = input.clone();
+        T[] buffer = input.clone();
+        mergeSort(result, buffer, 0, result.length, comparator);
         return result;
     }
 
@@ -19,6 +36,10 @@ public final class StableMergeSort {
             RestaurantCandidate b,
             SortMode mode
     ) {
+        Objects.requireNonNull(mode, "정렬 모드가 필요합니다.");
+        if (mode == SortMode.RECOMMENDED) {
+            throw new IllegalArgumentException("추천 비교는 BayesianRanker.compare()에서 작성하세요.");
+        }
         boolean aValid =
                 "google".equals(a.source)
                 && a.rating != null
@@ -87,12 +108,12 @@ public final class StableMergeSort {
     }
 
     /** 정렬 범위: [left, right) */
-    private static void mergeSort(
-            RestaurantCandidate[] items,
-            RestaurantCandidate[] buffer,
+    private static <T> void mergeSort(
+            T[] items,
+            T[] buffer,
             int left,
             int right,
-            SortMode mode
+            Comparator<? super T> comparator
     ) {
         // 원소가 0개 또는 1개면 정렬 완료
         if (right - left <= 1) {
@@ -101,20 +122,20 @@ public final class StableMergeSort {
 
         int mid = left + (right - left) / 2;
 
-        mergeSort(items, buffer, left, mid, mode);
-        mergeSort(items, buffer, mid, right, mode);
+        mergeSort(items, buffer, left, mid, comparator);
+        mergeSort(items, buffer, mid, right, comparator);
 
-        merge(items, buffer, left, mid, right, mode);
+        merge(items, buffer, left, mid, right, comparator);
     }
 
     /** [left, mid)와 [mid, right)를 병합 */
-    private static void merge(
-            RestaurantCandidate[] items,
-            RestaurantCandidate[] buffer,
+    private static <T> void merge(
+            T[] items,
+            T[] buffer,
             int left,
             int mid,
             int right,
-            SortMode mode
+            Comparator<? super T> comparator
     ) {
         int i = left;
         int j = mid;
@@ -123,7 +144,7 @@ public final class StableMergeSort {
         // 두 범위의 앞쪽 원소를 비교하며 버퍼에 저장
         while (i < mid && j < right) {
             // 동점이면 왼쪽을 먼저 선택해 안정성 유지
-            if (compare(items[i], items[j], mode) <= 0) {
+            if (comparator.compare(items[i], items[j]) <= 0) {
                 buffer[k++] = items[i++];
             } else {
                 buffer[k++] = items[j++];

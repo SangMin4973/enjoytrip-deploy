@@ -1,7 +1,7 @@
 import { createGooglePlaces } from '../server/google-places.js';
 import { collectGoogleRestaurants } from '../js/google-places.js';
 
-export const SORT_MODES = { rating: 'RATING_DESC', count: 'COUNT_DESC' };
+export const SORT_MODES = { rating: 'RATING_DESC', count: 'COUNT_DESC', recommended: 'RECOMMENDED' };
 
 // 정렬이 아닌 입력 변환입니다. 원래 수집 순서와 원본 객체를 보존합니다.
 export function sortingCandidates(restaurants) {
@@ -19,7 +19,7 @@ export function sortingCandidates(restaurants) {
 }
 
 export function javaSortingInput(restaurants, { mode = 'rating', expectedIds = [] } = {}) {
-  if (!Object.hasOwn(SORT_MODES, mode)) throw new Error('정렬 모드는 rating 또는 count입니다.');
+  if (!Object.hasOwn(SORT_MODES, mode)) throw new Error('정렬 모드는 rating, count, recommended입니다.');
   const candidates = sortingCandidates(restaurants);
   if (!Array.isArray(expectedIds) || expectedIds.some(id => typeof id !== 'string')) throw new Error('예상 ID 목록이 올바르지 않습니다.');
   const base64 = value => Buffer.from(value, 'utf8').toString('base64');

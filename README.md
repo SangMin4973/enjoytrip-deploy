@@ -1,6 +1,6 @@
 # 🍽️ 맛집기행
 
-Java 정렬 실습은 [algorithm-java/README.md](algorithm-java/README.md)를 참고합니다. 데이터 호출과 실행 준비는 완료되어 있으며 `StableMergeSort.java`의 TODO 1~3을 직접 작성합니다.
+Java 정렬·보정 추천 실습은 [algorithm-java/README.md](algorithm-java/README.md)를 참고합니다. Java 별점순·평가 수순 정렬은 구현되어 있고 다음 직접 구현 대상은 `BayesianRanker.java`의 점수 계산·추천 비교 TODO 두 곳입니다. 웹 정렬 연결은 별도 단계입니다.
 
 ## 현재 음식점 연결 — 2026-10-15
 
@@ -579,6 +579,6 @@ npm test
 
 - 이메일 인증과 분실 비밀번호 복구
 - 기기 간 북마크 동기화
-- 정렬 실습 TODO 구현과 웹 적용 검증
+- 보정 추천 TODO 구현과 웹 적용 방향 결정·검증
 - 자연어 여행 조건 입력과 실제 음식점 데이터 기반 추천
 - 선택한 음식점의 방문 순서 편집 및 여행 경로 저장
