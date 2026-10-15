@@ -1,0 +1,17 @@
+{
+  "description": "실제 Google 데이터가 아닌 정렬 연습용 합성 데이터입니다.",
+  "restaurants": [
+    { "id": "sample-A", "name": "A 식당", "source": "google", "rating": 4.8, "userRatingCount": 30 },
+    { "id": "sample-B", "name": "B 식당", "source": "google", "rating": 4.8, "userRatingCount": 300 },
+    { "id": "sample-C", "name": "C 식당", "source": "google", "rating": 4.9, "userRatingCount": 2 },
+    { "id": "sample-D", "name": "D 식당 · 평가 없음", "source": "google", "rating": null, "userRatingCount": 0 },
+    { "id": "sample-E", "name": "E 식당 · B와 동점", "source": "google", "rating": 4.8, "userRatingCount": 300 },
+    { "id": "sample-F", "name": "F 식당 · C와 동점", "source": "google", "rating": 4.9, "userRatingCount": 2 },
+    { "id": "sample-G", "name": "G 식당 · 이전 카카오 장소", "source": "kakao", "rating": null, "userRatingCount": 0 },
+    { "id": "sample-H", "name": "H 식당 · 평가 개수 0", "source": "google", "rating": 4.8, "userRatingCount": 0 }
+  ],
+  "expected": {
+    "rating": ["sample-C", "sample-F", "sample-B", "sample-E", "sample-A", "sample-D", "sample-G", "sample-H"],
+    "count": ["sample-B", "sample-E", "sample-A", "sample-C", "sample-F", "sample-D", "sample-G", "sample-H"]
+  }
+}

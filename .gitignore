@@ -9,6 +9,8 @@ node_modules/
 coverage/
 .nyc_output/
 .cache/
+algorithm-java/out/
+*.class
 
 # Temporary files and logs
 tmp/

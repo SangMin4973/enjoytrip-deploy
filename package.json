@@ -8,6 +8,10 @@
   "scripts": {
     "start": "node server.mjs",
     "dev": "node --watch server.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "sorting:build": "node scripts/sorting-exercise.mjs build",
+    "sorting:sample": "node scripts/sorting-exercise.mjs sample",
+    "sorting:google": "node scripts/sorting-exercise.mjs google",
+    "sorting:check": "node scripts/sorting-exercise.mjs check"
   }
 }
