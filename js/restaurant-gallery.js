@@ -100,8 +100,7 @@ export function initRestaurantGallery() {
         }, { once: true });
         button.append(image);
         button.addEventListener('click', event => { event.stopPropagation(); if (!image.hidden) openImage(restaurant, item, index); });
-        const attribution = document.createElement('div'); attribution.className = 'restaurant-image-credit'; showCredits(attribution, item.attributions);
-        tile.append(button, attribution); row.append(tile);
+        tile.append(button); row.append(tile);
       });
     } catch (error) {
       if (state !== batch || !box.isConnected) return;
